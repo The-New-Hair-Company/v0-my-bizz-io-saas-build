@@ -242,7 +242,7 @@ export default function PricingPage() {
               <div>
                 <h3 className="mb-2 text-lg font-semibold">{'Can I cancel anytime?'}</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  {'Yes, you can cancel anytime with no penalties. You'll have access until the end of your billing period.'}
+                  {'Yes, you can cancel anytime with no penalties. You will have access until the end of your billing period.'}
                 </p>
               </div>
             </div>
