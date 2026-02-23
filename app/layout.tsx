@@ -7,9 +7,8 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
+  title: 'MyBizz - AI-Powered Compliance for Startups',
+  description: 'Stay compliant effortlessly. MyBizz helps startups manage regulatory filings, deadlines, and documents with AI.',
   icons: {
     icon: [
       {
