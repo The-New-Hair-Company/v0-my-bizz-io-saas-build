@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Building2, LayoutDashboard, MessageSquare, FileText, Calendar, CheckSquare, Settings, LogOut } from 'lucide-react'
+import { Building2, LayoutDashboard, MessageSquare, FileText, Calendar, CheckSquare, Settings, LogOut, Scale, BrainCircuit, BarChart2 } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -25,6 +25,12 @@ const navigation = [
   { name: 'Documents', href: '/dashboard/documents', icon: FileText },
   { name: 'Deadlines', href: '/dashboard/deadlines', icon: Calendar },
   { name: 'Tasks', href: '/dashboard/tasks', icon: CheckSquare },
+]
+
+const aiNavigation = [
+  { name: 'AI Startup Lawyer', href: '/dashboard/ai/startup-lawyer', icon: Scale },
+  { name: 'AI Cofounder', href: '/dashboard/ai/cofounder', icon: BrainCircuit },
+  { name: 'AI Usage', href: '/dashboard/ai/usage', icon: BarChart2 },
 ]
 
 const settingsNavigation = [
@@ -69,6 +75,27 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
           <SidebarGroupContent>
             <SidebarMenu>
               {navigation.map((item) => {
+                const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
+                return (
+                  <SidebarMenuItem key={item.name}>
+                    <SidebarMenuButton asChild isActive={isActive}>
+                      <Link href={item.href}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.name}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>AI Agents</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {aiNavigation.map((item) => {
                 const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
                 return (
                   <SidebarMenuItem key={item.name}>
