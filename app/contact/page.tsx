@@ -1,6 +1,10 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 
+const contactEmail = "info@online2day.com"
+const contactPhoneDisplay = "0333 050 6098"
+const contactPhoneHref = "tel:03330506098"
+
 export const metadata: Metadata = {
   title: "Contact | Online2Day",
   description:
@@ -49,6 +53,34 @@ export default function ContactPage() {
                 </p>
               </div>
             </div>
+
+            <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+              <p className="text-sm font-medium uppercase tracking-[0.22em] text-white/40">
+                Direct contact
+              </p>
+
+              <div className="mt-4 space-y-3 text-sm leading-6 text-white/70">
+                <p>
+                  Phone:{" "}
+                  <Link
+                    href={contactPhoneHref}
+                    className="font-medium text-white underline-offset-4 hover:underline"
+                  >
+                    {contactPhoneDisplay}
+                  </Link>
+                </p>
+
+                <p>
+                  Email:{" "}
+                  <Link
+                    href={`mailto:${contactEmail}`}
+                    className="font-medium text-white underline-offset-4 hover:underline"
+                  >
+                    {contactEmail}
+                  </Link>
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/40 sm:p-8">
@@ -58,12 +90,19 @@ export default function ContactPage() {
               </h2>
               <p className="mt-3 text-sm leading-6 text-white/60">
                 Send a short message and we’ll come back to you with the most
-                sensible next step.
+                sensible next step. You can also call us directly on{" "}
+                <Link
+                  href={contactPhoneHref}
+                  className="font-medium text-white underline-offset-4 hover:underline"
+                >
+                  {contactPhoneDisplay}
+                </Link>
+                .
               </p>
             </div>
 
             <form
-              action="https://formsubmit.co/info@online2day.com"
+              action={`https://formsubmit.co/${contactEmail}`}
               method="POST"
               className="space-y-5"
             >
@@ -151,12 +190,22 @@ export default function ContactPage() {
 
             <div className="mt-8 border-t border-white/10 pt-6 text-sm leading-6 text-white/60">
               <p>
-                Prefer email?{" "}
+                Prefer to speak directly?{" "}
                 <Link
-                  href="mailto:info@online2day.com"
+                  href={contactPhoneHref}
                   className="font-medium text-white underline-offset-4 hover:underline"
                 >
-                  info@online2day.com
+                  {contactPhoneDisplay}
+                </Link>
+              </p>
+
+              <p className="mt-2">
+                Prefer email?{" "}
+                <Link
+                  href={`mailto:${contactEmail}`}
+                  className="font-medium text-white underline-offset-4 hover:underline"
+                >
+                  {contactEmail}
                 </Link>
               </p>
             </div>
