@@ -38,6 +38,13 @@ export async function GET(req: NextRequest) {
 
 // Also support POST for manual admin triggers from the dashboard
 export async function POST(req: NextRequest) {
+  if (CRON_SECRET) {
+    const authHeader = req.headers.get('authorization')
+    if (authHeader !== `Bearer ${CRON_SECRET}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+  }
+
   const { campaign_id } = await req.json().catch(() => ({}))
 
   try {

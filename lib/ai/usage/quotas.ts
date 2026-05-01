@@ -95,7 +95,8 @@ export async function checkAgentAllowed(
 
 /**
  * Record token usage for an organization after a successful AI call.
- * Uses upsert with increment to avoid race conditions.
+ * Uses the increment_ai_usage RPC for an atomic DB-level upsert to
+ * avoid the read-then-write race condition under concurrent requests.
  */
 export async function recordUsage(
   orgId: string,
@@ -106,32 +107,12 @@ export async function recordUsage(
   const today = new Date().toISOString().slice(0, 10)
   const cost = estimateCostUsd(tokensIn, tokensOut)
 
-  const { data: existing } = await supabase
-    .from('ai_usage_daily')
-    .select('tokens_in, tokens_out, cost_est_usd, requests')
-    .eq('organization_id', orgId)
-    .eq('date', today)
-    .single()
-
-  if (existing) {
-    await supabase
-      .from('ai_usage_daily')
-      .update({
-        tokens_in: existing.tokens_in + tokensIn,
-        tokens_out: existing.tokens_out + tokensOut,
-        cost_est_usd: parseFloat((Number(existing.cost_est_usd) + cost).toFixed(8)),
-        requests: existing.requests + 1,
-      })
-      .eq('organization_id', orgId)
-      .eq('date', today)
-  } else {
-    await supabase.from('ai_usage_daily').insert({
-      organization_id: orgId,
-      date: today,
-      tokens_in: tokensIn,
-      tokens_out: tokensOut,
-      cost_est_usd: cost,
-      requests: 1,
-    })
-  }
+  await supabase.rpc('increment_ai_usage', {
+    p_org_id: orgId,
+    p_date: today,
+    p_tokens_in: tokensIn,
+    p_tokens_out: tokensOut,
+    p_cost: cost,
+    p_requests: 1,
+  })
 }

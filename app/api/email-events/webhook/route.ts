@@ -45,19 +45,52 @@ const EVENT_TYPE_MAP: Record<string, string> = {
   'email.unsubscribed': 'unsubscribed',
 }
 
+/**
+ * Verify a Svix webhook signature (used by Resend).
+ * Signed content = "{svix-id}.{svix-timestamp}.{raw body}"
+ * Key = base64-decode(secret after stripping "whsec_" prefix)
+ */
+async function verifySvixSignature(
+  rawBody: string,
+  headers: Headers,
+  secret: string,
+): Promise<boolean> {
+  const msgId = headers.get('svix-id')
+  const msgTimestamp = headers.get('svix-timestamp')
+  const msgSignature = headers.get('svix-signature')
+
+  if (!msgId || !msgTimestamp || !msgSignature) return false
+
+  // Reject if timestamp is more than 5 minutes old or in the future
+  const ts = parseInt(msgTimestamp, 10)
+  if (isNaN(ts) || Math.abs(Date.now() / 1000 - ts) > 300) return false
+
+  const keyBase64 = secret.startsWith('whsec_') ? secret.slice(6) : secret
+  const keyBytes = Buffer.from(keyBase64, 'base64')
+  const { createHmac } = await import('node:crypto')
+  const signedContent = `${msgId}.${msgTimestamp}.${rawBody}`
+  const computed = createHmac('sha256', keyBytes).update(signedContent, 'utf8').digest('base64')
+
+  // Header format: "v1,<sig1> v1,<sig2> …"
+  return msgSignature
+    .split(' ')
+    .map((s) => s.split(',')[1])
+    .some((sig) => sig === computed)
+}
+
 export async function POST(req: NextRequest) {
-  // Verify webhook signature if Resend signing key is configured
+  // Read the raw body once so we can both verify the signature and parse JSON
+  const rawBody = await req.text()
+
   const signingSecret = process.env.RESEND_WEBHOOK_SECRET
   if (signingSecret) {
-    const sig = req.headers.get('svix-signature') ?? req.headers.get('resend-signature')
-    if (!sig) return NextResponse.json({ error: 'Missing signature' }, { status: 401 })
-    // TODO: verify HMAC-SHA256 signature with signingSecret
-    // Resend uses svix for webhook delivery — see https://resend.com/docs/dashboard/webhooks/introduction
+    const valid = await verifySvixSignature(rawBody, req.headers, signingSecret)
+    if (!valid) return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
   let event: ResendWebhookEvent
   try {
-    event = await req.json()
+    event = JSON.parse(rawBody) as ResendWebhookEvent
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }

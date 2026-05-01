@@ -53,7 +53,15 @@ export async function retrieveChunks(
     return []
   }
 
-  let chunks = (data ?? []) as RetrievedChunk[]
+  // The RPC returns snake_case column names; map to the camelCase RetrievedChunk type.
+  let chunks: RetrievedChunk[] = (data ?? []).map((row: any) => ({
+    id: row.id as string,
+    documentId: row.document_id as string,
+    chunkIndex: row.chunk_index as number,
+    content: row.content as string,
+    metadata: (row.metadata ?? {}) as Record<string, unknown>,
+    score: row.score as number,
+  }))
 
   // Optionally filter to requested document IDs (server-side safety)
   if (docIds && docIds.length > 0) {
