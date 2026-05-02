@@ -2,6 +2,7 @@
 
 import type { DashboardSection } from './types'
 import { NewsletterDashboard } from '@/components/newsletter/NewsletterDashboard'
+import { EmailsDashboard } from '@/components/emails/EmailsDashboard'
 
 interface CrmDashboardProps {
   section: DashboardSection
@@ -12,7 +13,11 @@ export function CrmDashboard({ section }: CrmDashboardProps) {
     return <NewsletterDashboard />
   }
 
-  // Placeholder for future sections (leads, videos, emails, messages, etc.)
+  if (section === 'emails') {
+    return <EmailsDashboard />
+  }
+
+  // Placeholder for future sections
   return (
     <div
       style={{
