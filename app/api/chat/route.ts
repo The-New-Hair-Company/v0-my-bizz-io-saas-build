@@ -1,73 +1,30 @@
-import { streamText } from 'ai'
-import { gateway } from '@/lib/ai/gateway'
+import { auth } from '@clerk/nextjs/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { buildRetrievalQuery, composeGroundedAnswer, type GroundedSource } from '@/lib/ai/grounded'
 
-export async function POST(req: Request) {
-  const { messages, chatId, organizationId } = await req.json()
+const schema = z.object({
+  messages: z.array(z.object({ role: z.string(), content: z.string() })).min(1),
+  chatId: z.string().uuid().optional().nullable(),
+  organizationId: z.string().uuid(),
+})
 
+export async function POST(request: Request) {
+  const session = await auth()
+  if (!session.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const parsed = schema.safeParse(await request.json().catch(() => null))
+  if (!parsed.success) return Response.json({ error: 'Invalid request' }, { status: 422 })
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    return new Response('Unauthorized', { status: 401 })
+  const { organizationId, chatId, messages } = parsed.data
+  const { data: membership } = await supabase.from('members').select('organization_id').eq('organization_id', organizationId).eq('user_id', session.userId).maybeSingle()
+  if (!membership) return Response.json({ error: 'Forbidden' }, { status: 403 })
+  const question = [...messages].reverse().find((message) => message.role === 'user')?.content ?? messages.at(-1)!.content
+  const { data, error } = await supabase.rpc('search_grounded_knowledge', { query_text: buildRetrievalQuery(question), p_organization_id: organizationId, match_count: 6 })
+  if (error) return Response.json({ error: error.message }, { status: 400 })
+  const answer = composeGroundedAnswer(question, (data ?? []) as GroundedSource[], 'startup_lawyer')
+  if (chatId) {
+    await supabase.from('messages').insert([{ chat_id: chatId, role: 'user', content: question }, { chat_id: chatId, role: 'assistant', content: answer }])
+    await supabase.from('chats').update({ updated_at: new Date().toISOString() }).eq('id', chatId)
   }
-
-  // Get organization details for context
-  const { data: organization } = await supabase
-    .from('organizations')
-    .select('*')
-    .eq('id', organizationId)
-    .single()
-
-  // System prompt with compliance context
-  const systemPrompt = `You are a helpful AI assistant for MyBizz, a compliance automation platform for startups. 
-  
-Your role is to help users with:
-- Understanding regulatory requirements and filing deadlines
-- Answering questions about incorporation, business entities, and compliance
-- Providing guidance on state-specific regulations
-- Explaining tax obligations and annual reports
-- Helping with document requirements
-
-${organization ? `Context about this company:
-- Name: ${organization.name}
-- Entity Type: ${organization.entity_type || 'Not specified'}
-- State: ${organization.state_of_incorporation || 'Not specified'}
-` : ''}
-
-Be professional, accurate, and helpful. If you're unsure about something, say so and recommend consulting with a legal professional. Always provide clear, actionable guidance.`
-
-  const result = streamText({
-    model: gateway('openai/gpt-4o-mini'),
-    system: systemPrompt,
-    messages,
-    async onFinish({ text }) {
-      // Save messages to database
-      if (chatId) {
-        const userMessage = messages[messages.length - 1]
-        
-        // Save user message
-        await supabase.from('messages').insert({
-          chat_id: chatId,
-          role: 'user',
-          content: userMessage.content,
-        })
-
-        // Save assistant message
-        await supabase.from('messages').insert({
-          chat_id: chatId,
-          role: 'assistant',
-          content: text,
-        })
-
-        // Update chat timestamp
-        await supabase
-          .from('chats')
-          .update({ updated_at: new Date().toISOString() })
-          .eq('id', chatId)
-      }
-    },
-  })
-
-  return result.toDataStreamResponse()
+  return Response.json({ message: { role: 'assistant', content: answer }, mode: 'local_retrieval', tokens: 0 })
 }

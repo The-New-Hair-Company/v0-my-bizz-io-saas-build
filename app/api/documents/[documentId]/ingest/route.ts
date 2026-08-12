@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { enqueueIngest } from '@/lib/jobs/inlineQueue'
+import { auth } from '@clerk/nextjs/server'
 
 export const maxDuration = 60
 
@@ -7,9 +8,9 @@ export async function POST(
   _req: Request,
   { params }: { params: Promise<{ documentId: string }> },
 ) {
+  const session = await auth()
+  if (!session.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { documentId } = await params
 
@@ -27,7 +28,7 @@ export async function POST(
   const { data: membership } = await supabase
     .from('members')
     .select('organization_id')
-    .eq('user_id', user.id)
+    .eq('user_id', session.userId)
     .eq('organization_id', doc.organization_id)
     .single()
 

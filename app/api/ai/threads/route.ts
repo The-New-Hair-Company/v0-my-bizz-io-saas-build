@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
+import { auth } from '@clerk/nextjs/server'
 
 export async function GET(req: Request) {
+  const session = await auth()
+  if (!session.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(req.url)
   const orgId = searchParams.get('organizationId')
@@ -30,9 +31,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const session = await auth()
+  if (!session.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { organizationId, agentType, title } = await req.json()
   if (!organizationId) return Response.json({ error: 'organizationId required' }, { status: 400 })
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
     .from('ai_threads')
     .insert({
       organization_id: organizationId,
-      created_by: user.id,
+      created_by: session.userId,
       agent_type: agentType ?? 'startup_lawyer',
       title: title ?? 'New conversation',
     })
@@ -54,9 +55,9 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  const session = await auth()
+  if (!session.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(req.url)
   const threadId = searchParams.get('threadId')
@@ -66,7 +67,7 @@ export async function DELETE(req: Request) {
     .from('ai_threads')
     .delete()
     .eq('id', threadId)
-    .eq('created_by', user.id)
+    .eq('created_by', session.userId)
 
   if (error) return Response.json({ error: error.message }, { status: 500 })
 

@@ -56,12 +56,51 @@ async function ensureAdminWorkspace(userId: string, email?: string | null) {
   if (memberError) throw memberError
 }
 
+async function acceptPendingInvites(userId: string, email?: string | null) {
+  if (!email) return
+
+  const admin = createAdminClient()
+  const { data: invites, error } = await admin
+    .from('team_invites')
+    .select('id, organization_id, role')
+    .ilike('email', email)
+    .eq('status', 'pending')
+    .gt('expires_at', new Date().toISOString())
+
+  // The first deployment can briefly run before the Agency OS migration is
+  // applied. Treat a missing invite table as no invitation, not an auth error.
+  if (error) return
+
+  for (const invite of invites ?? []) {
+    const { error: memberError } = await admin.from('members').upsert(
+      {
+        organization_id: invite.organization_id,
+        user_id: userId,
+        role: invite.role,
+      },
+      { onConflict: 'organization_id,user_id' },
+    )
+    if (memberError) throw memberError
+
+    const { error: inviteError } = await admin
+      .from('team_invites')
+      .update({
+        status: 'accepted',
+        accepted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', invite.id)
+    if (inviteError) throw inviteError
+  }
+}
+
 export async function requirePortalUser() {
   const session = await auth()
   if (!session.userId) redirect('/auth/login')
 
   const user = await currentUser()
   const email = user?.primaryEmailAddress?.emailAddress ?? null
+  await acceptPendingInvites(session.userId, email)
   await ensureAdminWorkspace(session.userId, email)
 
   return {

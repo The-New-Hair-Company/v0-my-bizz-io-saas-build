@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
 import { ChatLayout } from '@/components/ai/ChatLayout'
+import { requirePortalUser } from '@/lib/portal/auth'
+import { getActiveOrganization } from '@/lib/portal/context'
 
 export const metadata = {
   title: 'AI Cofounder — MyBizz',
@@ -8,17 +9,10 @@ export const metadata = {
 }
 
 export default async function CofounderPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const user = await requirePortalUser()
+  const membership = await getActiveOrganization(user.userId)
 
-  const { data: membership } = await supabase
-    .from('members')
-    .select('organization_id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!membership) redirect('/auth/login')
+  if (!membership) redirect('/dashboard')
 
   return (
     <ChatLayout

@@ -1,156 +1,25 @@
+import { FileCheck2, FileStack, Search, Sparkles } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { FileText, Upload, Download, MoreVertical, File } from 'lucide-react'
-import Link from 'next/link'
+import { requirePortalUser } from '@/lib/portal/auth'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { PageHeader } from '@/components/portal/PageHeader'
+import { DocumentUploader } from '@/components/portal/DocumentUploader'
 
 export default async function DocumentsPage() {
+  const user = await requirePortalUser()
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) return null
-
-  // Get user's organization
-  const { data: membership } = await supabase
-    .from('members')
-    .select('organization_id')
-    .eq('user_id', user.id)
-    .single()
-
-  const organizationId = membership?.organization_id
-
-  // Get documents
-  const { data: documents } = await supabase
-    .from('documents')
-    .select('*')
-    .eq('organization_id', organizationId)
-    .eq('status', 'active')
-    .order('created_at', { ascending: false })
-
-  // Group documents by type
-  const groupedDocs = documents?.reduce((acc: any, doc) => {
-    if (!acc[doc.type]) {
-      acc[doc.type] = []
-    }
-    acc[doc.type].push(doc)
-    return acc
-  }, {})
-
-  const documentTypes = [
-    { value: 'incorporation', label: 'Incorporation', color: 'bg-chart-1' },
-    { value: 'bylaws', label: 'Bylaws', color: 'bg-chart-2' },
-    { value: 'operating_agreement', label: 'Operating Agreement', color: 'bg-chart-3' },
-    { value: 'ein_letter', label: 'EIN Letter', color: 'bg-chart-4' },
-    { value: 'filing', label: 'Filing', color: 'bg-chart-5' },
-    { value: 'contract', label: 'Contract', color: 'bg-primary' },
-    { value: 'other', label: 'Other', color: 'bg-muted-foreground' },
-  ]
-
-  return (
-    <div className="flex-1 space-y-6 p-6 md:p-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Documents</h1>
-          <p className="text-muted-foreground">Manage your company documents</p>
-        </div>
-        <Button>
-          <Upload className="mr-2 h-4 w-4" />
-          Upload Document
-        </Button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="p-4">
-          <div className="text-sm font-medium text-muted-foreground">Total Documents</div>
-          <div className="mt-2 text-2xl font-bold">{documents?.length || 0}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-sm font-medium text-muted-foreground">Incorporation</div>
-          <div className="mt-2 text-2xl font-bold">{groupedDocs?.incorporation?.length || 0}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-sm font-medium text-muted-foreground">Filings</div>
-          <div className="mt-2 text-2xl font-bold">{groupedDocs?.filing?.length || 0}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-sm font-medium text-muted-foreground">Contracts</div>
-          <div className="mt-2 text-2xl font-bold">{groupedDocs?.contract?.length || 0}</div>
-        </Card>
-      </div>
-
-      {/* Document Type Sections */}
-      <div className="space-y-6">
-        {documentTypes.map((docType) => {
-          const typeDocs = groupedDocs?.[docType.value] || []
-          if (typeDocs.length === 0) return null
-
-          return (
-            <div key={docType.value}>
-              <div className="mb-4 flex items-center gap-3">
-                <div className={`h-1 w-8 rounded-full ${docType.color}`} />
-                <h2 className="text-lg font-semibold">{docType.label}</h2>
-                <span className="text-sm text-muted-foreground">({typeDocs.length})</span>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {typeDocs.map((doc: any) => (
-                  <Card key={doc.id} className="p-4 transition-all duration-200 hover:border-primary/50 hover:shadow-md">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <div className="rounded-lg bg-muted p-2">
-                          <FileText className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium">{doc.title}</div>
-                          <div className="mt-1 text-xs text-muted-foreground">
-                            Uploaded {new Date(doc.created_at).toLocaleDateString()}
-                          </div>
-                          {doc.file_size && (
-                            <div className="mt-1 text-xs text-muted-foreground">
-                              {(doc.file_size / 1024).toFixed(0)} KB
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    {doc.file_url && (
-                      <div className="mt-4 flex gap-2">
-                        <Button variant="outline" size="sm" className="flex-1" asChild>
-                          <Link href={doc.file_url} target="_blank">
-                            <Download className="mr-2 h-3 w-3" />
-                            Download
-                          </Link>
-                        </Button>
-                      </div>
-                    )}
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Empty State */}
-      {!documents || documents.length === 0 ? (
-        <Card className="p-12 text-center">
-          <File className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-          <h2 className="mb-2 text-xl font-semibold">No documents yet</h2>
-          <p className="mb-6 text-sm text-muted-foreground">
-            Upload your first document to get started
-          </p>
-          <Button>
-            <Upload className="mr-2 h-4 w-4" />
-            Upload Document
-          </Button>
-        </Card>
-      ) : null}
-    </div>
-  )
+  const [{ data: documents }, { data: memberships }] = await Promise.all([
+    supabase.from('documents').select('*, organizations(name)').order('created_at', { ascending: false }),
+    supabase.from('members').select('organization_id, organizations(name, source)').eq('user_id', user.userId),
+  ])
+  const items: any[] = documents ?? []
+  const accounts = (memberships ?? []).filter((item: any) => item.organizations?.source !== 'internal').map((item: any) => ({ id: item.organization_id, name: item.organizations?.name ?? 'Account' }))
+  return <div className="min-h-screen"><PageHeader eyebrow="Knowledge" title="Document intelligence vault" description="Tenant-isolated files, locally indexed for grounded answers without paid AI tokens."><DocumentUploader accounts={accounts} /></PageHeader><main className="mx-auto max-w-[1500px] p-5 sm:p-8 lg:p-10">
+    <div className="grid gap-4 sm:grid-cols-3"><Metric label="Files" value={items.length} icon={FileStack} /><Metric label="Ready for retrieval" value={items.filter((item) => item.ingest_status === 'ready').length} icon={FileCheck2} /><Metric label="Indexed passages" value={items.reduce((sum, item) => sum + Number(item.chunk_count ?? 0), 0)} icon={Sparkles} /></div>
+    <div className="mt-6 rounded-2xl border border-orange-100 bg-white p-3 shadow-sm"><div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-orange-900/30" /><Input className="border-0 bg-orange-50/60 pl-10 shadow-none" placeholder="Search the tenant knowledge vault" /></div></div>
+    <section className="mt-5 overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-sm">{items.length ? <div className="divide-y divide-orange-50">{items.map((document) => <article key={document.id} className="grid gap-4 px-6 py-5 md:grid-cols-[1fr_180px_130px_120px] md:items-center"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-orange-50 text-[var(--agency-accent)]"><FileStack className="h-4 w-4" /></span><div><h2 className="text-sm font-semibold text-orange-950">{document.title}</h2><p className="mt-1 text-xs text-orange-950/50">{document.organizations?.name} · {document.mime_type || 'File'}</p></div></div><Badge variant="secondary" className="w-fit capitalize">{document.document_type}</Badge><Badge className={document.ingest_status === 'ready' ? 'w-fit border-0 bg-orange-600 text-white' : 'w-fit border-0 bg-orange-50 text-orange-900'}>{document.ingest_status}</Badge><p className="text-xs text-orange-950/45">{document.chunk_count ?? 0} passages</p></article>)}</div> : <div className="p-16 text-center"><FileStack className="mx-auto h-8 w-8 text-orange-200" /><h2 className="mt-4 font-semibold">The vault is empty</h2><p className="mt-2 text-sm text-orange-950/50">Upload a PDF, Word document, text or Markdown file.</p></div>}</section>
+  </main></div>
 }
+
+function Metric({ label, value, icon: Icon }: { label: string; value: number; icon: typeof FileStack }) { return <div className="rounded-2xl border border-orange-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><p className="text-xs text-orange-950/50">{label}</p><Icon className="h-4 w-4 text-[var(--agency-accent)]" /></div><p className="mt-2 text-3xl font-semibold text-orange-950">{value}</p></div> }

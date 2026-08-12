@@ -70,7 +70,7 @@ export async function ingestDocument(documentId: string): Promise<IngestResult> 
     if (!doc.storage_path) throw new Error('No storage_path on document')
 
     const { data: fileData, error: storageErr } = await supabase.storage
-      .from('documents')
+      .from('company-documents')
       .download(doc.storage_path)
 
     if (storageErr || !fileData) {

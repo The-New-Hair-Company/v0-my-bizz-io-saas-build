@@ -1,12 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
+import { auth } from '@clerk/nextjs/server'
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ threadId: string }> },
 ) {
+  const session = await auth()
+  if (!session.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { threadId } = await params
 

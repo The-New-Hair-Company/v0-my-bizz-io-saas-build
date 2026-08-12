@@ -1,191 +1,24 @@
+import { CheckCircle2, Circle, Clock3, ListChecks } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { requirePortalUser } from '@/lib/portal/auth'
 import { Badge } from '@/components/ui/badge'
-import { CheckSquare, Plus, Square } from 'lucide-react'
+import { PageHeader } from '@/components/portal/PageHeader'
+import { RecordDialog } from '@/components/portal/RecordDialog'
+import { StatusSelect } from '@/components/portal/StatusSelect'
 
 export default async function TasksPage() {
+  const user = await requirePortalUser()
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) return null
-
-  // Get user's organization
-  const { data: membership } = await supabase
-    .from('members')
-    .select('organization_id')
-    .eq('user_id', user.id)
-    .single()
-
-  const organizationId = membership?.organization_id
-
-  // Get all tasks
-  const { data: tasks } = await supabase
-    .from('tasks')
-    .select('*')
-    .eq('organization_id', organizationId)
-    .order('created_at', { ascending: false })
-
-  const todoTasks = tasks?.filter((t) => t.status === 'todo') || []
-  const inProgressTasks = tasks?.filter((t) => t.status === 'in_progress') || []
-  const completedTasks = tasks?.filter((t) => t.status === 'completed') || []
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'bg-chart-4 text-white'
-      case 'medium':
-        return 'bg-chart-1 text-white'
-      case 'low':
-        return 'bg-chart-3 text-white'
-      default:
-        return 'bg-muted text-muted-foreground'
-    }
-  }
-
-  return (
-    <div className="flex-1 space-y-6 p-6 md:p-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
-          <p className="text-muted-foreground">Manage your action items</p>
-        </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          New Task
-        </Button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="p-4">
-          <div className="text-sm font-medium text-muted-foreground">To Do</div>
-          <div className="mt-2 text-2xl font-bold">{todoTasks.length}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-sm font-medium text-muted-foreground">In Progress</div>
-          <div className="mt-2 text-2xl font-bold">{inProgressTasks.length}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-sm font-medium text-muted-foreground">Completed</div>
-          <div className="mt-2 text-2xl font-bold">{completedTasks.length}</div>
-        </Card>
-      </div>
-
-      {/* Task Lists */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* To Do */}
-        <div>
-          <h2 className="mb-4 text-lg font-semibold">To Do</h2>
-          <div className="space-y-3">
-            {todoTasks.length > 0 ? (
-              todoTasks.map((task) => (
-                <Card key={task.id} className="p-4 transition-all duration-200 hover:border-primary/50 hover:shadow-md">
-                  <div className="flex items-start gap-3">
-                    <Square className="mt-0.5 h-5 w-5 flex-shrink-0 text-muted-foreground" />
-                    <div className="flex-1">
-                      <div className="mb-2 flex items-start justify-between gap-2">
-                        <h3 className="font-semibold">{task.title}</h3>
-                        <Badge className={getPriorityColor(task.priority)}>{task.priority}</Badge>
-                      </div>
-                      {task.description && (
-                        <p className="mb-2 text-sm text-muted-foreground">{task.description}</p>
-                      )}
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                        {task.due_date && (
-                          <span>Due: {new Date(task.due_date).toLocaleDateString()}</span>
-                        )}
-                        <span>Created: {new Date(task.created_at).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))
-            ) : (
-              <Card className="p-8 text-center">
-                <p className="text-sm text-muted-foreground">No tasks to do</p>
-              </Card>
-            )}
-          </div>
-        </div>
-
-        {/* In Progress */}
-        <div>
-          <h2 className="mb-4 text-lg font-semibold">In Progress</h2>
-          <div className="space-y-3">
-            {inProgressTasks.length > 0 ? (
-              inProgressTasks.map((task) => (
-                <Card key={task.id} className="border-primary/50 p-4">
-                  <div className="flex items-start gap-3">
-                    <Square className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
-                    <div className="flex-1">
-                      <div className="mb-2 flex items-start justify-between gap-2">
-                        <h3 className="font-semibold">{task.title}</h3>
-                        <Badge className={getPriorityColor(task.priority)}>{task.priority}</Badge>
-                      </div>
-                      {task.description && (
-                        <p className="mb-2 text-sm text-muted-foreground">{task.description}</p>
-                      )}
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                        {task.due_date && (
-                          <span>Due: {new Date(task.due_date).toLocaleDateString()}</span>
-                        )}
-                        <span>Created: {new Date(task.created_at).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))
-            ) : (
-              <Card className="p-8 text-center">
-                <p className="text-sm text-muted-foreground">No tasks in progress</p>
-              </Card>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Completed Tasks */}
-      {completedTasks.length > 0 && (
-        <div>
-          <h2 className="mb-4 text-lg font-semibold">Completed</h2>
-          <div className="space-y-3">
-            {completedTasks.slice(0, 10).map((task) => (
-              <Card key={task.id} className="p-4 opacity-70">
-                <div className="flex items-start gap-3">
-                  <CheckSquare className="mt-0.5 h-5 w-5 flex-shrink-0 text-chart-3" />
-                  <div className="flex-1">
-                    <h3 className="font-semibold line-through">{task.title}</h3>
-                    {task.completed_at && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Completed: {new Date(task.completed_at).toLocaleDateString()}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!tasks || tasks.length === 0 ? (
-        <Card className="p-12 text-center">
-          <CheckSquare className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-          <h2 className="mb-2 text-xl font-semibold">No tasks yet</h2>
-          <p className="mb-6 text-sm text-muted-foreground">
-            Create your first task to get started
-          </p>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            New Task
-          </Button>
-        </Card>
-      ) : null}
-    </div>
-  )
+  const [{ data: tasks }, { data: memberships }] = await Promise.all([
+    supabase.from('tasks').select('*, organizations(name)').order('due_date', { ascending: true, nullsFirst: false }),
+    supabase.from('members').select('organization_id, organizations(name, source)').eq('user_id', user.userId),
+  ])
+  const items: any[] = tasks ?? []
+  const accounts = (memberships ?? []).filter((item: any) => item.organizations?.source !== 'internal')
+  return <div className="min-h-screen"><PageHeader eyebrow="Execution" title="Action centre" description="Accountable work across every assigned client account."><RecordDialog resource="task" title="Create action" description="Assign a priority and deadline inside a client workspace." triggerLabel="New task" fixedData={{ status: 'todo' }} fields={[{ name: 'organization_id', label: 'Client account', type: 'select', required: true, options: accounts.map((item: any) => ({ value: item.organization_id, label: item.organizations?.name ?? 'Account' })) }, { name: 'title', label: 'Action', required: true }, { name: 'priority', label: 'Priority', type: 'select', defaultValue: 'medium', options: ['low','medium','high','urgent'].map((value) => ({ value, label: value })) }, { name: 'due_date', label: 'Due date', type: 'date' }, { name: 'description', label: 'Context', type: 'textarea' }]} /></PageHeader><main className="mx-auto max-w-[1500px] p-5 sm:p-8 lg:p-10">
+    <div className="grid gap-4 sm:grid-cols-3"><Metric label="To do" value={items.filter((i) => i.status === 'todo').length} icon={Circle} /><Metric label="In progress" value={items.filter((i) => i.status === 'in_progress').length} icon={Clock3} /><Metric label="Done" value={items.filter((i) => i.status === 'done').length} icon={CheckCircle2} /></div>
+    <section className="mt-6 overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-sm">{items.length ? <div className="divide-y divide-orange-50">{items.map((task) => <article key={task.id} className="grid gap-4 px-6 py-5 md:grid-cols-[1fr_180px_140px_140px] md:items-center"><div><div className="flex items-center gap-2"><h2 className="text-sm font-semibold text-orange-950">{task.title}</h2><Badge variant="secondary" className="capitalize">{task.priority}</Badge></div><p className="mt-1 text-xs text-orange-950/50">{task.organizations?.name}{task.description ? ` · ${task.description}` : ''}</p></div><p className="text-xs text-orange-950/55">{task.due_date ? new Date(task.due_date).toLocaleDateString('en-GB') : 'No deadline'}</p><StatusSelect resource="task" id={task.id} value={task.status} options={[{ value: 'todo', label: 'To do' }, { value: 'in_progress', label: 'In progress' }, { value: 'done', label: 'Done' }, { value: 'cancelled', label: 'Cancelled' }]} /><span className="text-right text-[10px] uppercase tracking-[.16em] text-orange-900/35">Tenant scoped</span></article>)}</div> : <div className="p-16 text-center"><ListChecks className="mx-auto h-8 w-8 text-orange-200" /><h2 className="mt-4 font-semibold">No actions yet</h2><p className="mt-2 text-sm text-orange-950/50">Create the first accountable next step.</p></div>}</section>
+  </main></div>
 }
+
+function Metric({ label, value, icon: Icon }: { label: string; value: number; icon: typeof Circle }) { return <div className="rounded-2xl border border-orange-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><p className="text-xs text-orange-950/50">{label}</p><Icon className="h-4 w-4 text-[var(--agency-accent)]" /></div><p className="mt-2 text-3xl font-semibold text-orange-950">{value}</p></div> }

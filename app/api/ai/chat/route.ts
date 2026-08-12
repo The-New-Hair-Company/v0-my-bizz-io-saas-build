@@ -1,179 +1,49 @@
-import { streamText } from 'ai'
-import { gateway } from '@/lib/ai/gateway'
+import { z } from 'zod'
+import { auth } from '@clerk/nextjs/server'
 import { createClient } from '@/lib/supabase/server'
-import { retrieveChunks } from '@/lib/ai/retrieval/retrieveChunks'
-import { formatContext, buildCitationMap } from '@/lib/ai/prompts/formatContext'
-import { buildSystemPrompt, type AgentType } from '@/lib/ai/prompts/system'
-import { checkDailyQuota, checkAgentAllowed, recordUsage } from '@/lib/ai/usage/quotas'
+import { buildRetrievalQuery, composeGroundedAnswer, type GroundedSource } from '@/lib/ai/grounded'
 
-export const maxDuration = 60
+const requestSchema = z.object({
+  message: z.string().trim().min(2).max(4000),
+  threadId: z.string().uuid().optional().nullable(),
+  organizationId: z.string().uuid(),
+  agentType: z.enum(['startup_lawyer', 'cofounder']).default('startup_lawyer'),
+})
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
+  const session = await auth()
+  if (!session.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
   const supabase = await createClient()
+  const parsed = requestSchema.safeParse(await request.json().catch(() => null))
+  if (!parsed.success) return Response.json({ error: parsed.error.issues[0]?.message ?? 'Invalid request' }, { status: 422 })
+  const { message, organizationId, agentType } = parsed.data
 
-  // Auth check
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const { data: membership } = await supabase.from('members').select('organization_id').eq('user_id', session.userId).eq('organization_id', organizationId).maybeSingle()
+  if (!membership) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+  let threadId = parsed.data.threadId
+  if (threadId) {
+    const { data: thread } = await supabase.from('ai_threads').select('id').eq('id', threadId).eq('organization_id', organizationId).maybeSingle()
+    if (!thread) return Response.json({ error: 'Conversation not found' }, { status: 404 })
+  } else {
+    const { data: thread, error } = await supabase.from('ai_threads').insert({ organization_id: organizationId, created_by: session.userId, agent_type: agentType, title: message.slice(0, 80) }).select('id').single()
+    if (error) return Response.json({ error: error.message }, { status: 400 })
+    threadId = thread.id
   }
 
-  const body = await req.json()
-  const {
-    messages,
-    threadId,
-    organizationId,
-    agentType = 'startup_lawyer',
-    docScope,
-  }: {
-    messages: Array<{ role: string; content: string }>
-    threadId?: string
-    organizationId: string
-    agentType?: AgentType
-    docScope?: string[]
-  } = body
+  const { data: sources, error: searchError } = await supabase.rpc('search_grounded_knowledge', { query_text: buildRetrievalQuery(message), p_organization_id: organizationId, match_count: 6 })
+  if (searchError) return Response.json({ error: searchError.message }, { status: 400 })
+  const groundedSources = (sources ?? []) as GroundedSource[]
+  const answer = composeGroundedAnswer(message, groundedSources, agentType)
 
-  if (!organizationId) {
-    return Response.json({ error: 'organizationId is required' }, { status: 400 })
-  }
+  const { error: userMessageError } = await supabase.from('ai_messages').insert({ thread_id: threadId, organization_id: organizationId, role: 'user', content: message, token_usage: { mode: 'local_retrieval', tokens: 0 } })
+  if (userMessageError) return Response.json({ error: userMessageError.message }, { status: 400 })
+  const { data: assistantMessage, error: assistantError } = await supabase.from('ai_messages').insert({ thread_id: threadId, organization_id: organizationId, role: 'assistant', content: answer, token_usage: { mode: 'local_retrieval', tokens: 0 } }).select('id').single()
+  if (assistantError) return Response.json({ error: assistantError.message }, { status: 400 })
 
-  // Verify org membership
-  const { data: membership } = await supabase
-    .from('members')
-    .select('organization_id')
-    .eq('user_id', user.id)
-    .eq('organization_id', organizationId)
-    .single()
+  const documentSources = groundedSources.filter((source) => source.source_kind === 'document' && source.document_id)
+  if (documentSources.length) await supabase.from('ai_citations').insert(documentSources.map((source) => ({ message_id: assistantMessage.id, chunk_id: source.source_id, document_id: source.document_id, organization_id: organizationId, quote: source.content.slice(0, 500), score: source.score })))
+  await supabase.from('ai_threads').update({ updated_at: new Date().toISOString() }).eq('id', threadId)
 
-  if (!membership) {
-    return Response.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
-  // Quota checks
-  const agentCheck = await checkAgentAllowed(organizationId, agentType)
-  if (!agentCheck.allowed) {
-    return Response.json({ error: agentCheck.reason }, { status: 402 })
-  }
-
-  const quotaCheck = await checkDailyQuota(organizationId)
-  if (!quotaCheck.allowed) {
-    return Response.json({ error: quotaCheck.reason }, { status: 429 })
-  }
-
-  // Get organization context
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('name, entity_type, state_of_incorporation, incorporation_date, plan')
-    .eq('id', organizationId)
-    .single()
-
-  // RAG: retrieve relevant chunks from the document vault
-  const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')
-  const chunks = lastUserMessage
-    ? await retrieveChunks(lastUserMessage.content, organizationId, docScope)
-    : []
-
-  const contextBlock = formatContext(chunks)
-  const citationMap = buildCitationMap(chunks)
-
-  // Build system prompt
-  const systemPrompt = buildSystemPrompt(agentType, {
-    name: org?.name ?? 'Unknown Company',
-    entityType: org?.entity_type,
-    jurisdiction: org?.state_of_incorporation,
-    incorporationDate: org?.incorporation_date,
-  }, contextBlock)
-
-  // Create or get thread
-  let resolvedThreadId = threadId
-
-  if (!resolvedThreadId) {
-    const title = lastUserMessage
-      ? lastUserMessage.content.slice(0, 80).trim()
-      : 'New conversation'
-
-    const { data: thread } = await supabase
-      .from('ai_threads')
-      .insert({
-        organization_id: organizationId,
-        created_by: user.id,
-        agent_type: agentType,
-        title,
-      })
-      .select('id')
-      .single()
-
-    resolvedThreadId = thread?.id
-  }
-
-  // Stream LLM response
-  const result = streamText({
-    model: gateway('openai/gpt-4o-mini'),
-    system: systemPrompt,
-    messages: messages as any,
-    async onFinish({ text, usage }) {
-      if (!resolvedThreadId) return
-
-      const tokensIn = usage?.promptTokens ?? 0
-      const tokensOut = usage?.completionTokens ?? 0
-
-      // Save user message
-      if (lastUserMessage) {
-        await supabase.from('ai_messages').insert({
-          thread_id: resolvedThreadId,
-          organization_id: organizationId,
-          role: 'user',
-          content: lastUserMessage.content,
-          token_usage: {},
-        })
-      }
-
-      // Save assistant message
-      const { data: savedMsg } = await supabase
-        .from('ai_messages')
-        .insert({
-          thread_id: resolvedThreadId,
-          organization_id: organizationId,
-          role: 'assistant',
-          content: text,
-          token_usage: { prompt: tokensIn, completion: tokensOut },
-        })
-        .select('id')
-        .single()
-
-      // Save citations
-      if (savedMsg && citationMap.size > 0) {
-        const citationRows = Array.from(citationMap.values()).map((c) => ({
-          message_id: savedMsg.id,
-          chunk_id: c.chunkId,
-          document_id: c.documentId,
-          organization_id: organizationId,
-          score: c.score,
-        }))
-        await supabase.from('ai_citations').insert(citationRows)
-      }
-
-      // Update thread timestamp
-      await supabase
-        .from('ai_threads')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', resolvedThreadId)
-
-      // Record usage
-      await recordUsage(organizationId, tokensIn, tokensOut)
-    },
-  })
-
-  const response = result.toDataStreamResponse()
-
-  // Attach threadId in header so client can persist it
-  if (resolvedThreadId) {
-    const headers = new Headers(response.headers)
-    headers.set('X-Thread-Id', resolvedThreadId)
-    return new Response(response.body, {
-      status: response.status,
-      headers,
-    })
-  }
-
-  return response
+  return Response.json({ threadId, message: { id: assistantMessage.id, role: 'assistant', content: answer }, sources: groundedSources.map((source) => ({ id: source.source_id, title: source.title, excerpt: source.content.slice(0, 240), score: source.score, kind: source.source_kind })) })
 }

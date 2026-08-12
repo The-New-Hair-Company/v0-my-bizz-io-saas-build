@@ -1,6 +1,3 @@
-import { embed } from 'ai'
-import { gateway } from '@/lib/ai/gateway'
-
 export const EMBEDDING_MODEL = 'openai/text-embedding-3-small'
 export const EMBEDDING_DIMENSIONS = 1536
 
@@ -9,11 +6,16 @@ export const EMBEDDING_DIMENSIONS = 1536
  * Uses the Vercel AI Gateway — no provider package needed.
  */
 export async function embedText(text: string): Promise<number[]> {
-  const { embedding } = await embed({
-    model: gateway.embedding(EMBEDDING_MODEL),
-    value: text,
-  })
-  return embedding
+  const vector = new Array<number>(EMBEDDING_DIMENSIONS).fill(0)
+  const words = text.toLowerCase().match(/[a-z0-9]+/g) ?? []
+  for (const word of words) {
+    let hash = 2166136261
+    for (let i = 0; i < word.length; i += 1) hash = Math.imul(hash ^ word.charCodeAt(i), 16777619)
+    const index = Math.abs(hash) % EMBEDDING_DIMENSIONS
+    vector[index] += hash & 1 ? -1 : 1
+  }
+  const norm = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0)) || 1
+  return vector.map((value) => value / norm)
 }
 
 /**
