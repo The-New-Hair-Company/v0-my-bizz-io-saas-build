@@ -32,34 +32,52 @@ on conflict (id) do nothing;
 
 -- Storage RLS policies
 create policy "Members can upload to their company prefix"
-  on storage.objects for insert
+  on storage.objects for insert to authenticated
   with check (
     bucket_id = 'company-documents' and
     exists (
       select 1 from public.members
       where organization_id = (storage.foldername(name))[2]::uuid
-      and user_id = auth.uid()
+      and user_id = (select auth.uid())
     )
   );
 
 create policy "Members can read their company files"
-  on storage.objects for select
+  on storage.objects for select to authenticated
   using (
     bucket_id = 'company-documents' and
     exists (
       select 1 from public.members
       where organization_id = (storage.foldername(name))[2]::uuid
-      and user_id = auth.uid()
+      and user_id = (select auth.uid())
     )
   );
 
-create policy "Members can delete their company files"
-  on storage.objects for delete
+create policy "Members can update their company files"
+  on storage.objects for update to authenticated
   using (
     bucket_id = 'company-documents' and
     exists (
       select 1 from public.members
       where organization_id = (storage.foldername(name))[2]::uuid
-      and user_id = auth.uid()
+      and user_id = (select auth.uid())
+    )
+  )
+  with check (
+    bucket_id = 'company-documents' and
+    exists (
+      select 1 from public.members
+      where organization_id = (storage.foldername(name))[2]::uuid
+      and user_id = (select auth.uid())
+    )
+  );
+
+create policy "Owners or admins can delete company files"
+  on storage.objects for delete to authenticated
+  using (
+    bucket_id = 'company-documents' and
+    (
+      owner_id = (select auth.uid())::text or
+      private.is_organization_admin((storage.foldername(name))[2]::uuid)
     )
   );

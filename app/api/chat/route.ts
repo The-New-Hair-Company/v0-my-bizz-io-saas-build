@@ -1,4 +1,5 @@
 import { streamText } from 'ai'
+import { gateway } from '@/lib/ai/gateway'
 import { createClient } from '@/lib/supabase/server'
 
 export async function POST(req: Request) {
@@ -37,7 +38,7 @@ ${organization ? `Context about this company:
 Be professional, accurate, and helpful. If you're unsure about something, say so and recommend consulting with a legal professional. Always provide clear, actionable guidance.`
 
   const result = streamText({
-    model: 'openai/gpt-4o-mini',
+    model: gateway('openai/gpt-4o-mini'),
     system: systemPrompt,
     messages,
     async onFinish({ text }) {

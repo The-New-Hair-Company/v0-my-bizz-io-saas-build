@@ -1,4 +1,4 @@
-// app/dashboard/newsletters/page.tsx
+// app/crm/newsletters/page.tsx
 import { CrmDashboard } from '@/components/crm-dashboard/crm-dashboard'
 
 export const metadata = {
@@ -6,6 +6,6 @@ export const metadata = {
   description: 'Create, schedule, and track branded newsletter campaigns.',
 }
 
-export default function DashboardNewslettersPage() {
+export default function CrmNewslettersPage() {
   return <CrmDashboard section="newsletters" />
 }

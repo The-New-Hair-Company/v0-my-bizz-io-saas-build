@@ -84,6 +84,11 @@ CREATE TABLE IF NOT EXISTS public.newsletter_campaign_versions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now()) NOT NULL
 );
 
+CREATE INDEX IF NOT EXISTS idx_newsletter_campaigns_created_by
+    ON public.newsletter_campaigns(created_by);
+CREATE INDEX IF NOT EXISTS idx_newsletter_campaign_versions_created_by
+    ON public.newsletter_campaign_versions(created_by);
+
 -- -----------------------------------------------
 -- SEND JOBS (one row per recipient per campaign)
 -- -----------------------------------------------
@@ -140,11 +145,19 @@ CREATE TABLE IF NOT EXISTS public.newsletter_unsubscribe_tokens (
 -- -----------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_nl_subscribers_email ON public.newsletter_subscribers(email);
 CREATE INDEX IF NOT EXISTS idx_nl_subscribers_status ON public.newsletter_subscribers(status);
+CREATE INDEX IF NOT EXISTS idx_nl_memberships_list ON public.newsletter_list_memberships(list_id);
+CREATE INDEX IF NOT EXISTS idx_nl_consent_subscriber ON public.newsletter_consent_events(subscriber_id);
+CREATE INDEX IF NOT EXISTS idx_nl_campaigns_list ON public.newsletter_campaigns(list_id);
+CREATE INDEX IF NOT EXISTS idx_nl_campaign_versions_campaign ON public.newsletter_campaign_versions(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_nl_send_jobs_campaign ON public.newsletter_send_jobs(campaign_id, status);
+CREATE INDEX IF NOT EXISTS idx_nl_send_jobs_subscriber ON public.newsletter_send_jobs(subscriber_id);
 CREATE INDEX IF NOT EXISTS idx_nl_send_jobs_queued ON public.newsletter_send_jobs(status, scheduled_for) WHERE status = 'queued';
 CREATE INDEX IF NOT EXISTS idx_nl_events_campaign ON public.newsletter_email_events(campaign_id, event_type);
+CREATE INDEX IF NOT EXISTS idx_nl_events_subscriber ON public.newsletter_email_events(subscriber_id);
 CREATE INDEX IF NOT EXISTS idx_nl_suppression_email ON public.newsletter_suppression_list(email);
 CREATE INDEX IF NOT EXISTS idx_nl_tokens_hash ON public.newsletter_unsubscribe_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_nl_tokens_subscriber ON public.newsletter_unsubscribe_tokens(subscriber_id);
+CREATE INDEX IF NOT EXISTS idx_nl_tokens_campaign ON public.newsletter_unsubscribe_tokens(campaign_id);
 
 -- -----------------------------------------------
 -- ROW-LEVEL SECURITY
@@ -162,31 +175,62 @@ ALTER TABLE public.newsletter_consent_events ENABLE ROW LEVEL SECURITY;
 
 -- Admin-only policies (service role bypasses RLS for workers/webhooks)
 CREATE POLICY "Admin can manage newsletter_subscribers"
-  ON public.newsletter_subscribers FOR ALL USING (public.is_admin());
+  ON public.newsletter_subscribers FOR ALL TO authenticated
+  USING ((select private.is_global_admin()))
+  WITH CHECK ((select private.is_global_admin()));
 
 CREATE POLICY "Admin can manage newsletter_lists"
-  ON public.newsletter_lists FOR ALL USING (public.is_admin());
+  ON public.newsletter_lists FOR ALL TO authenticated
+  USING ((select private.is_global_admin()))
+  WITH CHECK ((select private.is_global_admin()));
 
 CREATE POLICY "Admin can manage newsletter_list_memberships"
-  ON public.newsletter_list_memberships FOR ALL USING (public.is_admin());
+  ON public.newsletter_list_memberships FOR ALL TO authenticated
+  USING ((select private.is_global_admin()))
+  WITH CHECK ((select private.is_global_admin()));
 
 CREATE POLICY "Admin can manage newsletter_campaigns"
-  ON public.newsletter_campaigns FOR ALL USING (public.is_admin());
+  ON public.newsletter_campaigns FOR ALL TO authenticated
+  USING ((select private.is_global_admin()))
+  WITH CHECK ((select private.is_global_admin()));
 
 CREATE POLICY "Admin can manage newsletter_campaign_versions"
-  ON public.newsletter_campaign_versions FOR ALL USING (public.is_admin());
+  ON public.newsletter_campaign_versions FOR ALL TO authenticated
+  USING ((select private.is_global_admin()))
+  WITH CHECK ((select private.is_global_admin()));
 
 CREATE POLICY "Admin can view send_jobs"
-  ON public.newsletter_send_jobs FOR SELECT USING (public.is_admin());
+  ON public.newsletter_send_jobs FOR SELECT TO authenticated
+  USING ((select private.is_global_admin()));
 
 CREATE POLICY "Admin can view email_events"
-  ON public.newsletter_email_events FOR SELECT USING (public.is_admin());
+  ON public.newsletter_email_events FOR SELECT TO authenticated
+  USING ((select private.is_global_admin()));
 
 CREATE POLICY "Admin can manage suppression_list"
-  ON public.newsletter_suppression_list FOR ALL USING (public.is_admin());
+  ON public.newsletter_suppression_list FOR ALL TO authenticated
+  USING ((select private.is_global_admin()))
+  WITH CHECK ((select private.is_global_admin()));
 
 CREATE POLICY "Admin can view consent_events"
-  ON public.newsletter_consent_events FOR SELECT USING (public.is_admin());
+  ON public.newsletter_consent_events FOR SELECT TO authenticated
+  USING ((select private.is_global_admin()));
+
+-- Public web versions may read only campaigns that have already been sent.
+CREATE POLICY "Public can view sent newsletter_campaigns"
+  ON public.newsletter_campaigns FOR SELECT TO anon
+  USING (status = 'sent');
+
+CREATE POLICY "Public can view versions of sent campaigns"
+  ON public.newsletter_campaign_versions FOR SELECT TO anon
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.newsletter_campaigns
+      WHERE newsletter_campaigns.id = newsletter_campaign_versions.campaign_id
+        AND newsletter_campaigns.status = 'sent'
+    )
+  );
 
 -- -----------------------------------------------
 -- SEED DEFAULT LIST
@@ -199,12 +243,14 @@ ON CONFLICT DO NOTHING;
 -- UPDATED_AT TRIGGER
 -- -----------------------------------------------
 CREATE OR REPLACE FUNCTION public.set_updated_at()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
+RETURNS TRIGGER LANGUAGE plpgsql SET search_path = '' AS $$
 BEGIN NEW.updated_at = timezone('utc', now()); RETURN NEW; END;
 $$;
 
+DROP TRIGGER IF EXISTS nl_subscribers_updated_at ON public.newsletter_subscribers;
 CREATE TRIGGER nl_subscribers_updated_at BEFORE UPDATE ON public.newsletter_subscribers
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+DROP TRIGGER IF EXISTS nl_campaigns_updated_at ON public.newsletter_campaigns;
 CREATE TRIGGER nl_campaigns_updated_at BEFORE UPDATE ON public.newsletter_campaigns
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();

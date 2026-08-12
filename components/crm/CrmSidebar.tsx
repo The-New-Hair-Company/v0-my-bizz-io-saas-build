@@ -15,19 +15,19 @@ import {
 } from 'lucide-react'
 
 const mainNav = [
-  { name: 'Overview', href: '/dashboard', icon: LayoutDashboard, exact: true },
-  { name: 'Leads', href: '/dashboard/leads', icon: Users },
-  { name: 'Videos', href: '/dashboard/videos', icon: Video },
-  { name: 'Emails', href: '/dashboard/emails', icon: Mail },
-  { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare, badge: 4 },
+  { name: 'Overview', href: '/crm', icon: LayoutDashboard, exact: true },
+  { name: 'Leads', href: '/crm/leads', icon: Users },
+  { name: 'Videos', href: '/crm/videos', icon: Video },
+  { name: 'Emails', href: '/crm/emails', icon: Mail },
+  { name: 'Messages', href: '/crm/messages', icon: MessageSquare, badge: 4 },
 ]
 
 const requestsNav = [
-  { name: 'Site Requests', href: '/dashboard/site-requests', icon: Globe },
+  { name: 'Site Requests', href: '/crm/site-requests', icon: Globe },
 ]
 
 const toolsNav = [
-  { name: 'Integrations', href: '/dashboard/integrations', icon: Puzzle },
+  { name: 'Integrations', href: '/crm/integrations', icon: Puzzle },
 ]
 
 export function CrmSidebar() {

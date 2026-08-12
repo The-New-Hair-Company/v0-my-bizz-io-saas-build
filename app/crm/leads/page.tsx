@@ -76,7 +76,7 @@ function triggerDownload(content: string, filename: string, mimeType: string) {
   a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url)
 }
 
-export default function LeadsPage() {
+export default function CrmLeadsPage() {
   const [search, setSearch] = useState('')
   const [stageFilter, setStageFilter] = useState('all')
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)

@@ -5,6 +5,6 @@ export const metadata = {
   description: 'Manage and track video assets across your sales funnel.',
 }
 
-export default function VideosPage() {
+export default function CrmVideosPage() {
   return <VideosDashboard />
 }

@@ -1,4 +1,5 @@
 import { embed } from 'ai'
+import { gateway } from '@/lib/ai/gateway'
 
 export const EMBEDDING_MODEL = 'openai/text-embedding-3-small'
 export const EMBEDDING_DIMENSIONS = 1536
@@ -9,7 +10,7 @@ export const EMBEDDING_DIMENSIONS = 1536
  */
 export async function embedText(text: string): Promise<number[]> {
   const { embedding } = await embed({
-    model: EMBEDDING_MODEL,
+    model: gateway.embedding(EMBEDDING_MODEL),
     value: text,
   })
   return embedding

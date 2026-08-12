@@ -1,6 +1,6 @@
 import { CrmSidebar } from '@/components/crm/CrmSidebar'
 
-export default function CrmDashboardLayout({ children }: { children: React.ReactNode }) {
+export default function CrmLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{

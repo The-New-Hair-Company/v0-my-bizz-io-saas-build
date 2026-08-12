@@ -17,7 +17,9 @@ export default async function CompanyPage() {
     .eq('user_id', user.id)
     .single()
 
-  const organization = membership?.organizations
+  const organization = Array.isArray(membership?.organizations)
+    ? membership.organizations[0]
+    : membership?.organizations
 
   return (
     <div className="flex-1 space-y-6 p-6 md:p-8">

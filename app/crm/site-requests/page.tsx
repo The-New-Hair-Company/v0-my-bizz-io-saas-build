@@ -71,7 +71,7 @@ function triggerDownload(content: string, filename: string, mimeType: string) {
   a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url)
 }
 
-export default function SiteRequestsPage() {
+export default function CrmSiteRequestsPage() {
   const [search, setSearch] = useState('')
   const [stageFilter, setStageFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')

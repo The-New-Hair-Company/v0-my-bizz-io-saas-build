@@ -6,7 +6,7 @@
 -- match_chunks: vector similarity search scoped to one org
 -- -----------------------------------------------
 create or replace function public.match_chunks(
-  query_embedding vector(1536),
+  query_embedding extensions.vector(1536),
   org_id          uuid,
   match_count     int     default 6,
   match_threshold float   default 0.55
@@ -21,8 +21,8 @@ returns table (
 )
 language sql
 stable
-security definer
-set search_path = public
+security invoker
+set search_path = ''
 as $$
   select
     dc.id,
@@ -30,19 +30,21 @@ as $$
     dc.chunk_index,
     dc.content,
     dc.metadata,
-    (1 - (dc.embedding <=> query_embedding))::float as score
+    (1 - (dc.embedding operator(extensions.<=>) query_embedding))::float as score
   from public.document_chunks dc
   where
     dc.organization_id = org_id
     and dc.embedding is not null
-    and (1 - (dc.embedding <=> query_embedding)) > match_threshold
-  order by dc.embedding <=> query_embedding
+    and (1 - (dc.embedding operator(extensions.<=>) query_embedding)) > match_threshold
+  order by dc.embedding operator(extensions.<=>) query_embedding
   limit match_count;
 $$;
 
--- Allow authenticated users to call this function (RLS on the
--- underlying table still restricts which rows are visible)
-grant execute on function public.match_chunks(vector, uuid, int, float)
+revoke execute on function public.match_chunks(extensions.vector, uuid, int, float)
+  from public, anon;
+
+-- RLS on document_chunks restricts results to the caller's organizations.
+grant execute on function public.match_chunks(extensions.vector, uuid, int, float)
   to authenticated;
 
 -- -----------------------------------------------
@@ -58,10 +60,11 @@ create or replace function public.increment_ai_usage(
   p_requests integer default 1
 )
 returns void
-language sql
-security definer
-set search_path = public
+language plpgsql
+security invoker
+set search_path = ''
 as $$
+begin
   insert into public.ai_usage_daily
     (organization_id, date, tokens_in, tokens_out, cost_est_usd, requests)
   values
@@ -72,7 +75,11 @@ as $$
     tokens_out   = ai_usage_daily.tokens_out   + excluded.tokens_out,
     cost_est_usd = ai_usage_daily.cost_est_usd + excluded.cost_est_usd,
     requests     = ai_usage_daily.requests     + excluded.requests;
+end;
 $$;
+
+revoke execute on function public.increment_ai_usage(uuid, date, integer, integer, numeric, integer)
+  from public, anon;
 
 grant execute on function public.increment_ai_usage(uuid, date, integer, integer, numeric, integer)
   to authenticated, service_role;

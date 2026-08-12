@@ -5,6 +5,6 @@ export const metadata = {
   description: 'Send, test and track emails that move leads closer to sale.',
 }
 
-export default function EmailsPage() {
+export default function CrmEmailsPage() {
   return <EmailsDashboard />
 }

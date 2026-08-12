@@ -1,8 +1,14 @@
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { getSupabasePublicConfig } from './config'
 
-export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  )
+export function createClient(accessToken?: () => Promise<string | null>) {
+  const { publishableKey, url } = getSupabasePublicConfig()
+
+  return createSupabaseClient(url, publishableKey, {
+    accessToken,
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
 }

@@ -15,11 +15,11 @@ alter table public.documents
 create table if not exists public.document_chunks (
   id             uuid primary key default gen_random_uuid(),
   document_id    uuid not null references public.documents(id) on delete cascade,
-  organization_id uuid not null,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
   chunk_index    integer not null,
   content        text not null,
   token_count_est integer not null default 0,
-  embedding      vector(1536),           -- OpenAI text-embedding-3-small dimension
+  embedding      extensions.vector(1536), -- OpenAI text-embedding-3-small dimension
   content_hash   text not null,          -- SHA-256 of content, for cache hit
   metadata       jsonb not null default '{}',
   created_at     timestamptz default now(),
@@ -42,7 +42,7 @@ create index if not exists idx_chunks_content_hash
 -- ai_threads: conversation threads
 create table if not exists public.ai_threads (
   id              uuid primary key default gen_random_uuid(),
-  organization_id uuid not null,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
   created_by      uuid not null references auth.users(id) on delete cascade,
   agent_type      text not null check (agent_type in ('startup_lawyer','cofounder')),
   title           text not null default 'New conversation',
@@ -62,7 +62,7 @@ create index if not exists idx_ai_threads_user
 create table if not exists public.ai_messages (
   id              uuid primary key default gen_random_uuid(),
   thread_id       uuid not null references public.ai_threads(id) on delete cascade,
-  organization_id uuid not null,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
   role            text not null check (role in ('user','assistant','system')),
   content         text not null,
   token_usage     jsonb not null default '{}',  -- {prompt_tokens, completion_tokens, total_tokens}
@@ -74,13 +74,16 @@ alter table public.ai_messages enable row level security;
 create index if not exists idx_ai_messages_thread
   on public.ai_messages (thread_id, created_at asc);
 
+create index if not exists idx_ai_messages_org
+  on public.ai_messages (organization_id);
+
 -- ai_citations: chunk references per assistant message
 create table if not exists public.ai_citations (
   id              uuid primary key default gen_random_uuid(),
   message_id      uuid not null references public.ai_messages(id) on delete cascade,
   chunk_id        uuid references public.document_chunks(id) on delete set null,
   document_id     uuid references public.documents(id) on delete set null,
-  organization_id uuid not null,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
   quote           text,
   score           double precision,
   created_at      timestamptz default now()
@@ -91,9 +94,18 @@ alter table public.ai_citations enable row level security;
 create index if not exists idx_ai_citations_message
   on public.ai_citations (message_id);
 
+create index if not exists idx_ai_citations_chunk
+  on public.ai_citations (chunk_id);
+
+create index if not exists idx_ai_citations_document
+  on public.ai_citations (document_id);
+
+create index if not exists idx_ai_citations_org
+  on public.ai_citations (organization_id);
+
 -- ai_usage_daily: per-company daily usage tracking
 create table if not exists public.ai_usage_daily (
-  organization_id uuid not null,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
   date            date not null,
   tokens_in       integer not null default 0,
   tokens_out      integer not null default 0,

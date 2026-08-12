@@ -1,234 +1,96 @@
-import { createClient } from '@/lib/supabase/server'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { ArrowRight, AlertCircle, CheckCircle2, Calendar, FileText, MessageSquare, Clock } from 'lucide-react'
+import { ArrowUpRight, Building2, CalendarClock, CheckCircle2, ChevronRight, CircleDollarSign, Clock3, FileStack, Gauge, Inbox, Layers3, MoreHorizontal, Plus, Sparkles, TrendingUp, Users2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+import { requirePortalUser } from '@/lib/portal/auth'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 
 export default async function DashboardPage() {
+  const user = await requirePortalUser()
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
 
-  if (!user) return null
+  const [organizationsResult, intakesResult, projectsResult, tasksResult, activityResult] = await Promise.all([
+    supabase.from('organizations').select('*').order('last_activity_at', { ascending: false }),
+    supabase.from('intake_submissions').select('*').order('submitted_at', { ascending: false }).limit(8),
+    supabase.from('client_projects').select('*').order('updated_at', { ascending: false }),
+    supabase.from('tasks').select('id, organization_id, status, priority, due_date'),
+    supabase.from('account_activity').select('*, organizations(name)').order('created_at', { ascending: false }).limit(7),
+  ])
 
-  // Get user's organization
-  const { data: membership } = await supabase
-    .from('members')
-    .select('organization_id, role, organizations(*)')
-    .eq('user_id', user.id)
-    .single()
-
-  const organizationId = membership?.organization_id
-
-  // Get upcoming deadlines
-  const { data: upcomingDeadlines, count: deadlineCount } = await supabase
-    .from('filings')
-    .select('*', { count: 'exact' })
-    .eq('organization_id', organizationId)
-    .eq('status', 'pending')
-    .gte('due_date', new Date().toISOString().split('T')[0])
-    .order('due_date', { ascending: true })
-    .limit(5)
-
-  // Get pending tasks
-  const { data: pendingTasks, count: taskCount } = await supabase
-    .from('tasks')
-    .select('*', { count: 'exact' })
-    .eq('organization_id', organizationId)
-    .in('status', ['todo', 'in_progress'])
-    .order('created_at', { ascending: false })
-    .limit(5)
-
-  // Get recent documents
-  const { count: documentCount } = await supabase
-    .from('documents')
-    .select('*', { count: 'exact', head: true })
-    .eq('organization_id', organizationId)
-
-  // Get recent chats
-  const { count: chatCount } = await supabase
-    .from('chats')
-    .select('*', { count: 'exact', head: true })
-    .eq('organization_id', organizationId)
-
-  const stats = [
-    {
-      label: 'Upcoming Deadlines',
-      value: deadlineCount || 0,
-      icon: Calendar,
-      href: '/dashboard/deadlines',
-      color: 'text-chart-1',
-    },
-    {
-      label: 'Pending Tasks',
-      value: taskCount || 0,
-      icon: CheckCircle2,
-      href: '/dashboard/tasks',
-      color: 'text-chart-2',
-    },
-    {
-      label: 'Documents',
-      value: documentCount || 0,
-      icon: FileText,
-      href: '/dashboard/documents',
-      color: 'text-chart-3',
-    },
-    {
-      label: 'Chat Sessions',
-      value: chatCount || 0,
-      icon: MessageSquare,
-      href: '/dashboard/chat',
-      color: 'text-chart-4',
-    },
-  ]
+  const organizations = (organizationsResult.data ?? []).filter((organization: any) => organization.source !== 'internal')
+  const intakes = intakesResult.data ?? []
+  const projects = projectsResult.data ?? []
+  const tasks = tasksResult.data ?? []
+  const activity = activityResult.data ?? []
+  const activeAccounts = organizations.filter((organization: any) => ['active', 'onboarding'].includes(organization.lifecycle_stage)).length
+  const pipelineValue = organizations.reduce((sum: number, organization: any) => sum + Number(organization.estimated_value ?? 0), 0)
+  const openTasks = tasks.filter((task: any) => !['done', 'cancelled'].includes(task.status)).length
+  const attentionAccounts = organizations.filter((organization: any) => organization.account_status === 'at_risk' || organization.health_score < 60).length
+  const pipelineStages = ['lead', 'discovery', 'proposal', 'onboarding', 'active']
+  const stageCounts = pipelineStages.map((stage) => ({ stage, count: organizations.filter((organization: any) => organization.lifecycle_stage === stage).length }))
+  const maxStage = Math.max(1, ...stageCounts.map((item) => item.count))
 
   return (
-    <div className="flex-1 space-y-6 p-6 md:p-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          {'Welcome back, '}{user.email?.split('@')[0]}
-        </p>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <Link key={stat.label} href={stat.href}>
-            <Card className="p-6 transition-all duration-200 hover:border-primary/50 hover:shadow-md">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                  <p className="mt-2 text-3xl font-bold">{stat.value}</p>
-                </div>
-                <stat.icon className={`h-8 w-8 ${stat.color}`} />
-              </div>
-            </Card>
-          </Link>
-        ))}
-      </div>
-
-      {/* Quick Actions */}
-      <Card className="p-6">
-        <h2 className="mb-4 text-lg font-semibold">Quick Actions</h2>
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-          <Link href="/dashboard/chat">
-            <Button variant="outline" className="h-auto w-full flex-col items-start p-4 text-left">
-              <MessageSquare className="mb-2 h-5 w-5 text-primary" />
-              <div className="font-semibold">Ask AI</div>
-              <div className="text-xs text-muted-foreground">Get compliance guidance</div>
-            </Button>
-          </Link>
-          <Link href="/dashboard/documents">
-            <Button variant="outline" className="h-auto w-full flex-col items-start p-4 text-left">
-              <FileText className="mb-2 h-5 w-5 text-primary" />
-              <div className="font-semibold">Upload Document</div>
-              <div className="text-xs text-muted-foreground">Add a new file</div>
-            </Button>
-          </Link>
-          <Link href="/dashboard/deadlines">
-            <Button variant="outline" className="h-auto w-full flex-col items-start p-4 text-left">
-              <Calendar className="mb-2 h-5 w-5 text-primary" />
-              <div className="font-semibold">View Calendar</div>
-              <div className="text-xs text-muted-foreground">See all deadlines</div>
-            </Button>
-          </Link>
-          <Link href="/dashboard/company">
-            <Button variant="outline" className="h-auto w-full flex-col items-start p-4 text-left">
-              <CheckCircle2 className="mb-2 h-5 w-5 text-primary" />
-              <div className="font-semibold">Update Profile</div>
-              <div className="text-xs text-muted-foreground">Company information</div>
-            </Button>
-          </Link>
+    <div className="min-h-screen text-slate-950">
+      <header className="border-b border-slate-200 bg-white px-5 py-5 sm:px-8 lg:px-10">
+        <div className="mx-auto flex max-w-[1600px] flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div><div className="flex items-center gap-2 text-xs font-medium text-slate-500"><span>Agency OS</span><ChevronRight className="h-3 w-3" /><span className="text-slate-900">Command centre</span></div><h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">Good {dayPeriod()}, {user.name.split(' ')[0]}.</h1><p className="mt-1 text-sm text-slate-500">Here’s the signal across your client portfolio.</p></div>
+          <div className="flex items-center gap-2"><Button variant="outline" asChild><Link href="/start" target="_blank"><ArrowUpRight className="mr-2 h-4 w-4" /> Open intake</Link></Button><Button className="bg-[#0b1726] text-white hover:bg-slate-800"><Plus className="mr-2 h-4 w-4" /> New account</Button></div>
         </div>
-      </Card>
+      </header>
 
-      {/* Main Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Upcoming Deadlines */}
-        <Card className="p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Upcoming Deadlines</h2>
-            <Link href="/dashboard/deadlines">
-              <Button variant="ghost" size="sm">
-                View all
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-          {upcomingDeadlines && upcomingDeadlines.length > 0 ? (
-            <div className="space-y-4">
-              {upcomingDeadlines.map((deadline) => (
-                <div
-                  key={deadline.id}
-                  className="flex items-start gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
-                >
-                  <div className="mt-0.5">
-                    {deadline.priority === 'critical' || deadline.priority === 'high' ? (
-                      <AlertCircle className="h-5 w-5 text-destructive" />
-                    ) : (
-                      <Clock className="h-5 w-5 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium">{deadline.title}</div>
-                    <div className="text-sm text-muted-foreground">
-                      Due: {new Date(deadline.due_date).toLocaleDateString()}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-lg border border-dashed border-border p-8 text-center">
-              <Calendar className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">No upcoming deadlines</p>
-            </div>
-          )}
-        </Card>
+      <main className="mx-auto max-w-[1600px] space-y-7 p-5 sm:p-8 lg:p-10">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <Metric icon={Building2} label="Active accounts" value={String(activeAccounts)} detail={`${organizations.length} total portfolio`} tone="emerald" />
+          <Metric icon={CircleDollarSign} label="Pipeline value" value={currency(pipelineValue)} detail="Weighted client opportunity" tone="cyan" />
+          <Metric icon={CheckCircle2} label="Open actions" value={String(openTasks)} detail={`${tasks.filter((task: any) => task.priority === 'urgent').length} urgent`} tone="violet" />
+          <Metric icon={Gauge} label="Needs attention" value={String(attentionAccounts)} detail={attentionAccounts ? 'Review client health' : 'Portfolio healthy'} tone="amber" />
+        </section>
 
-        {/* Pending Tasks */}
-        <Card className="p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Pending Tasks</h2>
-            <Link href="/dashboard/tasks">
-              <Button variant="ghost" size="sm">
-                View all
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
+        <section className="grid gap-6 xl:grid-cols-[1.55fr_0.85fr]">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5"><div><h2 className="font-semibold">Account portfolio</h2><p className="mt-1 text-xs text-slate-500">Commercial status, delivery health and next action</p></div><Button variant="ghost" size="sm" asChild><Link href="/dashboard/accounts">View all <ChevronRight className="ml-1 h-4 w-4" /></Link></Button></div>
+            {organizations.length ? <div className="divide-y divide-slate-100">{organizations.slice(0, 6).map((organization: any) => <AccountRow key={organization.id} organization={organization} />)}</div> : <EmptyPortfolio />}
           </div>
-          {pendingTasks && pendingTasks.length > 0 ? (
-            <div className="space-y-4">
-              {pendingTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="flex items-start gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
-                >
-                  <div className="mt-0.5">
-                    <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium">{task.title}</div>
-                    {task.due_date && (
-                      <div className="text-sm text-muted-foreground">
-                        Due: {new Date(task.due_date).toLocaleDateString()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-lg border border-dashed border-border p-8 text-center">
-              <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">No pending tasks</p>
-            </div>
-          )}
-        </Card>
-      </div>
+
+          <div className="rounded-2xl bg-[#0a1726] p-6 text-white shadow-xl shadow-slate-900/10">
+            <div className="flex items-center justify-between"><div><p className="text-xs font-medium uppercase tracking-[0.16em] text-emerald-300">Pipeline velocity</p><h2 className="mt-2 text-xl font-semibold">From signal to launch</h2></div><TrendingUp className="h-5 w-5 text-emerald-300" /></div>
+            <div className="mt-8 space-y-5">{stageCounts.map((item, index) => <div key={item.stage}><div className="mb-2 flex items-center justify-between text-xs"><span className="capitalize text-slate-400">{item.stage}</span><span className="font-semibold">{item.count}</span></div><div className="h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400" style={{ width: `${item.count ? Math.max(14, (item.count / maxStage) * 100) : 0}%`, opacity: 1 - index * 0.08 }} /></div></div>)}</div>
+            <div className="mt-8 grid grid-cols-2 gap-3 border-t border-white/10 pt-6"><div className="rounded-xl bg-white/[0.05] p-4"><p className="text-2xl font-semibold">{intakes.filter((item: any) => item.status === 'new').length}</p><p className="mt-1 text-xs text-slate-500">New briefs</p></div><div className="rounded-xl bg-white/[0.05] p-4"><p className="text-2xl font-semibold">{projects.filter((item: any) => !['complete', 'on_hold'].includes(item.status)).length}</p><p className="mt-1 text-xs text-slate-500">Live projects</p></div></div>
+          </div>
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5"><div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><Inbox className="h-4 w-4" /></span><div><h2 className="font-semibold">Intake inbox</h2><p className="text-xs text-slate-500">New business signals</p></div></div><Badge variant="secondary">{intakes.length} recent</Badge></div>
+            <div className="divide-y divide-slate-100">{intakes.length ? intakes.slice(0, 5).map((intake: any) => <div key={intake.id} className="flex items-center gap-4 px-6 py-4"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-sm font-semibold text-slate-700">{initials(intake.company_name)}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{intake.company_name}</p><p className="truncate text-xs text-slate-500">{intake.project_types?.join(' · ') || intake.industry}</p></div><div className="text-right"><Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50">{intake.status}</Badge><p className="mt-1 text-[10px] text-slate-400">{relativeTime(intake.submitted_at)}</p></div></div>) : <div className="p-10 text-center text-sm text-slate-500">New project briefs will appear here.</div>}</div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5"><div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-cyan-50 text-cyan-700"><Clock3 className="h-4 w-4" /></span><div><h2 className="font-semibold">Activity stream</h2><p className="text-xs text-slate-500">Latest portfolio movement</p></div></div><MoreHorizontal className="h-5 w-5 text-slate-400" /></div>
+            <div className="p-6">{activity.length ? <div className="space-y-5">{activity.map((item: any, index: number) => <div key={item.id} className="relative flex gap-4">{index < activity.length - 1 && <span className="absolute left-[15px] top-8 h-[calc(100%+4px)] w-px bg-slate-200" />}<span className="relative grid h-8 w-8 shrink-0 place-items-center rounded-full border border-slate-200 bg-white"><span className="h-2 w-2 rounded-full bg-emerald-400" /></span><div className="min-w-0 pb-1"><p className="text-sm font-medium">{item.title}</p><p className="mt-0.5 text-xs leading-5 text-slate-500">{item.organizations?.name}{item.description ? ` · ${item.description}` : ''}</p><p className="mt-1 text-[10px] uppercase tracking-wide text-slate-400">{relativeTime(item.created_at)}</p></div></div>)}</div> : <div className="py-8 text-center"><Sparkles className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-3 text-sm text-slate-500">Portfolio activity will build as your team works.</p></div>}</div>
+          </div>
+        </section>
+      </main>
     </div>
   )
 }
+
+function Metric({ icon: Icon, label, value, detail, tone }: { icon: typeof Building2; label: string; value: string; detail: string; tone: 'emerald' | 'cyan' | 'violet' | 'amber' }) {
+  const tones = { emerald: 'bg-emerald-50 text-emerald-700', cyan: 'bg-cyan-50 text-cyan-700', violet: 'bg-violet-50 text-violet-700', amber: 'bg-amber-50 text-amber-700' }
+  return <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between"><div><p className="text-xs font-medium text-slate-500">{label}</p><p className="mt-2 text-3xl font-semibold tracking-[-0.04em]">{value}</p></div><span className={`grid h-10 w-10 place-items-center rounded-xl ${tones[tone]}`}><Icon className="h-4 w-4" /></span></div><p className="mt-4 flex items-center gap-1 text-[11px] text-slate-400"><ArrowUpRight className="h-3 w-3" /> {detail}</p></div>
+}
+
+function AccountRow({ organization }: { organization: any }) {
+  const health = organization.health_score ?? 75
+  return <Link href={`/dashboard/accounts/${organization.id}`} className="grid items-center gap-4 px-6 py-4 transition hover:bg-slate-50 sm:grid-cols-[1.5fr_0.8fr_0.8fr_auto]"><div className="flex min-w-0 items-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#0b1726] text-xs font-semibold text-white">{initials(organization.name)}</span><div className="min-w-0"><p className="truncate text-sm font-semibold">{organization.name}</p><p className="truncate text-xs text-slate-500">{organization.industry ?? organization.primary_contact_email ?? 'Client account'}</p></div></div><div><p className="text-[10px] uppercase tracking-wide text-slate-400">Stage</p><Badge variant="secondary" className="mt-1 capitalize">{organization.lifecycle_stage}</Badge></div><div><div className="flex items-center justify-between text-[10px]"><span className="text-slate-400">Health</span><span className="font-semibold">{health}%</span></div><div className="mt-2 h-1.5 w-24 rounded-full bg-slate-100"><div className={`h-full rounded-full ${health < 60 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${health}%` }} /></div></div><ChevronRight className="hidden h-4 w-4 text-slate-300 sm:block" /></Link>
+}
+
+function EmptyPortfolio() {
+  return <div className="px-8 py-14 text-center"><span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-500"><Layers3 className="h-6 w-6" /></span><h3 className="mt-4 font-semibold">Your portfolio is ready for its first signal</h3><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">Send the project intake link to a prospect. Their answers will create an assigned client account automatically.</p><Button asChild className="mt-5 bg-[#0b1726] text-white"><Link href="/start" target="_blank">Open intake wizard</Link></Button></div>
+}
+
+function initials(value: string) { return value.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() }
+function currency(value: number) { return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(value) }
+function relativeTime(value: string) { const minutes = Math.max(1, Math.floor((Date.now() - new Date(value).getTime()) / 60000)); if (minutes < 60) return `${minutes}m ago`; const hours = Math.floor(minutes / 60); if (hours < 24) return `${hours}h ago`; return `${Math.floor(hours / 24)}d ago` }
+function dayPeriod() { const hour = new Date().getHours(); return hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening' }

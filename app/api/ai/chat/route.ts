@@ -1,4 +1,5 @@
 import { streamText } from 'ai'
+import { gateway } from '@/lib/ai/gateway'
 import { createClient } from '@/lib/supabase/server'
 import { retrieveChunks } from '@/lib/ai/retrieval/retrieveChunks'
 import { formatContext, buildCitationMap } from '@/lib/ai/prompts/formatContext'
@@ -106,7 +107,7 @@ export async function POST(req: Request) {
 
   // Stream LLM response
   const result = streamText({
-    model: 'openai/gpt-4o-mini',
+    model: gateway('openai/gpt-4o-mini'),
     system: systemPrompt,
     messages: messages as any,
     async onFinish({ text, usage }) {

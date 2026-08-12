@@ -20,3 +20,4 @@ alter table public.extracted_facts enable row level security;
 create index if not exists idx_extracted_facts_organization_id on public.extracted_facts(organization_id);
 create index if not exists idx_extracted_facts_type on public.extracted_facts(fact_type);
 create index if not exists idx_extracted_facts_chat_id on public.extracted_facts(chat_id);
+create index if not exists idx_extracted_facts_verified_by on public.extracted_facts(verified_by);

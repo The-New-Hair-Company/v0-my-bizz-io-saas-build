@@ -23,3 +23,5 @@ create index if not exists idx_tasks_status on public.tasks(status);
 create index if not exists idx_tasks_assigned_to on public.tasks(assigned_to);
 create index if not exists idx_tasks_due_date on public.tasks(due_date);
 create index if not exists idx_tasks_priority on public.tasks(priority);
+create index if not exists idx_tasks_created_by on public.tasks(created_by);
+create index if not exists idx_tasks_filing_id on public.tasks(filing_id);

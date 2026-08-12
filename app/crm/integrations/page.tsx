@@ -63,7 +63,7 @@ const planBadge: Record<Integration['plan'], { label: string; color: string }> =
   enterprise: { label: 'Enterprise', color: '#8b5cf6' },
 }
 
-export default function IntegrationsPage() {
+export default function CrmIntegrationsPage() {
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')

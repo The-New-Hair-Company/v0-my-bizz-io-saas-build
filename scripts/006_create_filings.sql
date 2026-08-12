@@ -24,3 +24,5 @@ create index if not exists idx_filings_organization_id on public.filings(organiz
 create index if not exists idx_filings_due_date on public.filings(due_date);
 create index if not exists idx_filings_status on public.filings(status);
 create index if not exists idx_filings_jurisdiction on public.filings(jurisdiction);
+create index if not exists idx_filings_document_id on public.filings(document_id);
+create index if not exists idx_filings_created_by on public.filings(created_by);

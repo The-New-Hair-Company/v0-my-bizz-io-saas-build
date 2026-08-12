@@ -84,7 +84,7 @@ const inputSt: React.CSSProperties = { background: 'rgba(8,12,19,0.7)', border: 
 const btnGhost: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: '1px solid rgba(116,147,196,0.2)', background: 'rgba(11,17,28,0.8)', color: '#9aa5b6', cursor: 'pointer', fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap' as const }
 const btnBlue: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(59,130,246,0.45)', background: 'linear-gradient(135deg, rgba(37,99,235,0.35), rgba(37,99,235,0.15))', color: '#8ab4ff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }
 
-export default function MessagesPage() {
+export default function CrmMessagesPage() {
   const [search, setSearch] = useState('')
   const [active, setActive] = useState<Conversation>(mockConversations[0])
   const [reply, setReply] = useState('')

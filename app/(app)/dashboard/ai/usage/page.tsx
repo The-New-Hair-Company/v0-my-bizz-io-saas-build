@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSession, useUser } from '@clerk/nextjs'
 import { createClient } from '@/lib/supabase/client'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -30,21 +31,30 @@ type Limits = {
 } | null
 
 export default function AIUsagePage() {
+  const { session } = useSession()
+  const { user, isLoaded } = useUser()
+  const supabase = useMemo(
+    () => createClient(async () => session?.getToken() ?? null),
+    [session],
+  )
   const [daily, setDaily] = useState<UsageDay[]>([])
   const [totals, setTotals] = useState<Totals | null>(null)
   const [limits, setLimits] = useState<Limits>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!isLoaded || !user) return
     const load = async () => {
-      const supabase = createClient()
       const { data: membership } = await supabase
         .from('members')
         .select('organization_id')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '')
+        .eq('user_id', user.id)
         .single()
 
-      if (!membership) return
+      if (!membership) {
+        setLoading(false)
+        return
+      }
 
       const res = await fetch(
         `/api/ai/usage?organizationId=${membership.organization_id}&days=30`,
@@ -56,7 +66,7 @@ export default function AIUsagePage() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [isLoaded, user?.id, supabase])
 
   const chartData = daily.map((d) => ({
     date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),

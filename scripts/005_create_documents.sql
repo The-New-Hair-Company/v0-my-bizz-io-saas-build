@@ -20,3 +20,4 @@ alter table public.documents enable row level security;
 create index if not exists idx_documents_organization_id on public.documents(organization_id);
 create index if not exists idx_documents_type on public.documents(document_type);
 create index if not exists idx_documents_created_at on public.documents(created_at desc);
+create index if not exists idx_documents_uploaded_by on public.documents(uploaded_by);

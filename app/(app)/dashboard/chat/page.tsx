@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { useSession, useUser } from '@clerk/nextjs'
 import { useChat } from 'ai/react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -9,6 +10,12 @@ import { Send, Plus, MessageSquare, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function ChatPage() {
+  const { session } = useSession()
+  const { user, isLoaded } = useUser()
+  const supabase = useMemo(
+    () => createClient(async () => session?.getToken() ?? null),
+    [session],
+  )
   const [chats, setChats] = useState<any[]>([])
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
   const [organizationId, setOrganizationId] = useState<string | null>(null)
@@ -23,17 +30,16 @@ export default function ChatPage() {
   })
 
   useEffect(() => {
+    if (!isLoaded || !user) return
     loadChats()
     loadOrganization()
-  }, [])
+  }, [isLoaded, user?.id, supabase])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   const loadOrganization = async () => {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
     const { data: membership } = await supabase
@@ -48,8 +54,6 @@ export default function ChatPage() {
   }
 
   const loadChats = async () => {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
     const { data: membership } = await supabase
@@ -76,9 +80,6 @@ export default function ChatPage() {
 
   const createNewChat = async () => {
     if (!organizationId) return
-
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
     const { data, error } = await supabase

@@ -1,5 +1,6 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { auth, currentUser } from '@clerk/nextjs/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { getSupabasePublicConfig } from './config'
 
 /**
  * Especially important if using Fluid compute: Don't put this client in a
@@ -7,28 +8,34 @@ import { cookies } from 'next/headers'
  * it.
  */
 export async function createClient() {
-  const cookieStore = await cookies()
+  const session = await auth()
+  const { publishableKey, url } = getSupabasePublicConfig()
 
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options),
-            )
-          } catch {
-            // The "setAll" method was called from a Server Component.
-            // This can be ignored if you have proxy refreshing
-            // user sessions.
-          }
-        },
-      },
+  const client = createSupabaseClient(url, publishableKey, {
+    accessToken: async () => session.getToken(),
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
     },
-  )
+  })
+
+  // Compatibility for existing server modules while the portal uses Clerk as
+  // the source of identity. Database authorization still uses the Clerk JWT.
+  const clerkUser = session.userId ? await currentUser() : null
+  ;(client.auth as any).getUser = async () => ({
+    data: {
+      user: clerkUser
+        ? ({
+            id: clerkUser.id,
+            email: clerkUser.primaryEmailAddress?.emailAddress ?? undefined,
+            user_metadata: {
+              full_name: clerkUser.fullName,
+            },
+          } as never)
+        : null,
+    },
+    error: null,
+  })
+
+  return client
 }

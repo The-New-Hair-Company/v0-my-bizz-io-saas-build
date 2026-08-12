@@ -29,7 +29,7 @@ export default function HomePage() {
                 Log in
               </Button>
             </Link>
-            <Link href="/auth/sign-up">
+            <Link href="/start">
               <Button size="sm" className="transition-all duration-200 hover:scale-105">
                 Start Free
               </Button>
@@ -54,7 +54,7 @@ export default function HomePage() {
             {'Stop worrying about compliance and focus on what matters.'}
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link href="/auth/sign-up">
+            <Link href="/start">
               <Button size="lg" className="w-full transition-all duration-200 hover:scale-105 sm:w-auto">
                 {'Get Started Free'}
                 <ArrowRight className="ml-2 h-4 w-4" />

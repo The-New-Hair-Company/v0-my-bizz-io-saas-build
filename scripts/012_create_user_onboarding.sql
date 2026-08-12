@@ -1,10 +1,10 @@
 -- Create trigger to automatically create organization and member record on user signup
 
-create or replace function public.handle_new_user_onboarding()
+create or replace function private.handle_new_user_onboarding()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   new_org_id uuid;
@@ -27,9 +27,11 @@ begin
 end;
 $$;
 
+revoke execute on function private.handle_new_user_onboarding() from public, anon, authenticated, service_role;
+
 drop trigger if exists on_user_signup_onboarding on auth.users;
 
 create trigger on_user_signup_onboarding
   after insert on auth.users
   for each row
-  execute function public.handle_new_user_onboarding();
+  execute function private.handle_new_user_onboarding();

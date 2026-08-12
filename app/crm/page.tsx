@@ -23,7 +23,7 @@ const card: React.CSSProperties = {
 
 const sections = [
   {
-    href: '/dashboard/leads',
+    href: '/crm/leads',
     icon: Users,
     color: '#3b82f6',
     label: 'Leads',
@@ -32,7 +32,7 @@ const sections = [
     badge: '+3 this week',
   },
   {
-    href: '/dashboard/videos',
+    href: '/crm/videos',
     icon: Video,
     color: '#8b5cf6',
     label: 'Videos',
@@ -41,7 +41,7 @@ const sections = [
     badge: '74% avg watch',
   },
   {
-    href: '/dashboard/emails',
+    href: '/crm/emails',
     icon: Mail,
     color: '#22c55e',
     label: 'Emails',
@@ -50,7 +50,7 @@ const sections = [
     badge: '34% avg open',
   },
   {
-    href: '/dashboard/messages',
+    href: '/crm/messages',
     icon: MessageSquare,
     color: '#f59e0b',
     label: 'Messages',
@@ -59,7 +59,7 @@ const sections = [
     badge: 'High priority',
   },
   {
-    href: '/dashboard/site-requests',
+    href: '/crm/site-requests',
     icon: Globe,
     color: '#ec4899',
     label: 'Site Requests',

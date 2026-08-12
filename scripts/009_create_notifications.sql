@@ -18,3 +18,4 @@ alter table public.notifications enable row level security;
 create index if not exists idx_notifications_user_id on public.notifications(user_id);
 create index if not exists idx_notifications_read on public.notifications(read);
 create index if not exists idx_notifications_created_at on public.notifications(created_at desc);
+create index if not exists idx_notifications_organization_id on public.notifications(organization_id);
