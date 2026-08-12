@@ -3,6 +3,8 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { createClient } from '@/lib/supabase/server'
 import { requirePortalUser } from '@/lib/portal/auth'
 import { PortalTheme } from '@/components/portal/PortalTheme'
+import { PlanBanner } from '@/components/portal/PlanBanner'
+import { getEntitlementSummary } from '@/lib/ai/entitlements'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requirePortalUser()
@@ -15,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       .order('created_at', { ascending: true }),
     supabase
       .from('member_preferences')
-      .select('accent_color, compact_mode')
+      .select('active_organization_id, accent_color, compact_mode')
       .eq('user_id', user.userId)
       .maybeSingle(),
   ])
@@ -27,6 +29,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     stage: Array.isArray(membership.organizations) ? membership.organizations[0]?.lifecycle_stage : membership.organizations?.lifecycle_stage,
     role: membership.role,
   }))
+  const activeAccount = accounts.find((account) => account.id === preferences?.active_organization_id) ?? accounts[0]
+  const entitlement = activeAccount ? await getEntitlementSummary(activeAccount.id) : null
 
   return (
     <PortalTheme accentColor={preferences?.accent_color ?? '#ff6600'} compactMode={preferences?.compact_mode}>
@@ -34,6 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex min-h-screen w-full bg-[#fff8f2]">
         <AppSidebar user={user} accounts={accounts} />
         <main className="min-w-0 flex-1">
+          {entitlement && <PlanBanner used={entitlement.intelligenceRuns.used} limit={entitlement.intelligenceRuns.limit} />}
           <div className="sticky top-0 z-30 flex h-14 items-center border-b border-orange-100 bg-white/90 px-4 backdrop-blur-xl lg:hidden">
             <SidebarTrigger />
             <span className="ml-3 text-sm font-semibold text-orange-950">MyBizz Command Centre</span>

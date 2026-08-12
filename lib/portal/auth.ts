@@ -13,47 +13,92 @@ function configuredAdminIds() {
   )
 }
 
-export function isConfiguredAdmin(userId: string) {
-  return configuredAdminIds().has(userId)
+function configuredAdminEmails() {
+  return new Set(
+    (process.env.ADMIN_EMAILS ?? '')
+      .split(',')
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean),
+  )
 }
 
-async function ensureAdminWorkspace(userId: string, email?: string | null) {
-  if (!isConfiguredAdmin(userId)) return
+export function isConfiguredAdmin(userId: string, email?: string | null) {
+  return configuredAdminIds().has(userId) || Boolean(email && configuredAdminEmails().has(email.toLowerCase()))
+}
+
+async function ensureWorkspace(userId: string, email: string | null | undefined, displayName: string) {
+  const isAdmin = isConfiguredAdmin(userId, email)
 
   const admin = createAdminClient()
-  const { count, error: membershipError } = await admin
+  const { data: existingMembership, error: membershipError } = await admin
     .from('members')
-    .select('id', { count: 'exact', head: true })
+    .select('organization_id')
     .eq('user_id', userId)
+    .limit(1)
+    .maybeSingle()
 
   if (membershipError) throw membershipError
-  if ((count ?? 0) > 0) return
+  if (existingMembership) return
+
+  if (isAdmin) {
+    const { data: internalOrganization } = await admin
+      .from('organizations')
+      .select('id')
+      .eq('source', 'internal')
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    if (internalOrganization) {
+      const { error } = await admin.from('members').upsert(
+        { organization_id: internalOrganization.id, user_id: userId, role: 'owner' },
+        { onConflict: 'organization_id,user_id' },
+      )
+      if (error) throw error
+      return
+    }
+  }
+
+  const workspaceName = isAdmin ? 'MyBizz Agency' : `${displayName}'s workspace`
+  const slugBase = (isAdmin ? 'mybizz-agency' : displayName)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 42) || 'workspace'
+  const slug = isAdmin ? slugBase : `${slugBase}-${userId.slice(-8).toLowerCase()}`
+  const plan = isAdmin ? 'enterprise' : 'free'
 
   const { data: organization, error: organizationError } = await admin
     .from('organizations')
-    .insert({
-      name: 'MyBizz Agency',
-      slug: 'mybizz-agency',
-      lifecycle_stage: 'active',
+    .upsert({
+      name: workspaceName,
+      slug,
+      lifecycle_stage: isAdmin ? 'active' : 'onboarding',
       account_status: 'active',
-      source: 'internal',
+      source: isAdmin ? 'internal' : 'self_serve',
       primary_contact_email: email,
       created_by: userId,
-      onboarding_progress: 100,
-      health_score: 100,
-    })
+      onboarding_progress: isAdmin ? 100 : 10,
+      health_score: isAdmin ? 100 : 70,
+      plan,
+    }, { onConflict: 'slug' })
     .select('id')
     .single()
 
   if (organizationError) throw organizationError
 
-  const { error: memberError } = await admin.from('members').insert({
-    organization_id: organization.id,
-    user_id: userId,
-    role: 'owner',
-  })
+  const { error: memberError } = await admin.from('members').upsert(
+    { organization_id: organization.id, user_id: userId, role: 'owner' },
+    { onConflict: 'organization_id,user_id' },
+  )
 
   if (memberError) throw memberError
+
+  const { error: subscriptionError } = await admin.from('organization_subscriptions').upsert(
+    { organization_id: organization.id, plan_key: plan, status: 'active', provider: 'manual' },
+    { onConflict: 'organization_id' },
+  )
+  if (subscriptionError) throw subscriptionError
 }
 
 async function acceptPendingInvites(userId: string, email?: string | null) {
@@ -101,7 +146,8 @@ export async function requirePortalUser() {
   const user = await currentUser()
   const email = user?.primaryEmailAddress?.emailAddress ?? null
   await acceptPendingInvites(session.userId, email)
-  await ensureAdminWorkspace(session.userId, email)
+  const displayName = user?.firstName ?? user?.fullName ?? email?.split('@')[0] ?? 'MyBizz'
+  await ensureWorkspace(session.userId, email, displayName)
 
   return {
     userId: session.userId,
@@ -112,6 +158,6 @@ export async function requirePortalUser() {
       email?.split('@')[0] ??
       'Portal user',
     imageUrl: user?.imageUrl ?? null,
-    isAdmin: isConfiguredAdmin(session.userId),
+    isAdmin: isConfiguredAdmin(session.userId, email),
   }
 }

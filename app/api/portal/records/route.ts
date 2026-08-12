@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
+import { auth, currentUser } from '@clerk/nextjs/server'
 import { randomBytes } from 'node:crypto'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
@@ -71,7 +71,8 @@ type Resource = keyof typeof schemas
 async function actor() {
   const session = await auth()
   if (!session.userId) return null
-  return { userId: session.userId, supabase: await createClient() }
+  const user = await currentUser()
+  return { userId: session.userId, email: user?.primaryEmailAddress?.emailAddress ?? null, supabase: await createClient() }
 }
 
 async function assigned(supabase: Awaited<ReturnType<typeof createClient>>, userId: string, organizationId: string, admin = false) {
@@ -98,7 +99,7 @@ export async function POST(request: Request) {
   const data: any = parsed.data
 
   if (resource === 'account') {
-    if (!isConfiguredAdmin(current.userId)) return Response.json({ error: 'Forbidden' }, { status: 403 })
+    if (!isConfiguredAdmin(current.userId, current.email)) return Response.json({ error: 'Forbidden' }, { status: 403 })
     const admin = createAdminClient()
     const slugBase = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'account'
     const { data: account, error } = await admin.from('organizations').insert({
@@ -141,6 +142,14 @@ export async function POST(request: Request) {
     if (error) return Response.json({ error: error.message }, { status: 400 })
     return Response.json({ record }, { status: 201 })
   } else if (resource === 'invite') {
+    const [{ data: organization }, { count: seatCount }] = await Promise.all([
+      current.supabase.from('organizations').select('plan, plan_limits(max_seats)').eq('id', data.organization_id).single(),
+      current.supabase.from('members').select('id', { count: 'exact', head: true }).eq('organization_id', data.organization_id),
+    ])
+    const plan = Array.isArray((organization as any)?.plan_limits) ? (organization as any).plan_limits[0] : (organization as any)?.plan_limits
+    if ((seatCount ?? 0) >= Number(plan?.max_seats ?? 1)) {
+      return Response.json({ error: 'This workspace has reached its seat allowance.', code: 'PLAN_LIMIT_REACHED', upgradeUrl: '/pricing?source=seat-limit' }, { status: 402 })
+    }
     const { data: record, error } = await current.supabase.from('team_invites').insert({
       ...data,
       email: data.email.toLowerCase(),
@@ -209,4 +218,3 @@ export async function DELETE(request: Request) {
   if (error) return Response.json({ error: error.message }, { status: 400 })
   return Response.json({ success: true })
 }
-

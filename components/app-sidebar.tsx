@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
-import { Activity, BarChart3, Blocks, Bot, BriefcaseBusiness, Building2, CalendarClock, ChevronDown, CircleGauge, FileStack, FolderKanban, Inbox, LifeBuoy, ListChecks, Settings2, Sparkles, Users2 } from 'lucide-react'
+import { Activity, BarChart3, Blocks, Bot, BrainCircuit, BriefcaseBusiness, Building2, CalendarClock, ChevronDown, CircleGauge, FileStack, FolderKanban, Inbox, LifeBuoy, ListChecks, Settings2, Sparkles, Users2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
@@ -20,6 +20,7 @@ const navigation = [
 ]
 
 const intelligence = [
+  { name: 'Intelligence HQ', href: '/dashboard/intelligence', icon: BrainCircuit },
   { name: 'AI startup lawyer', href: '/dashboard/ai/startup-lawyer', icon: Bot },
   { name: 'AI cofounder', href: '/dashboard/ai/cofounder', icon: Sparkles },
   { name: 'Usage & controls', href: '/dashboard/ai/usage', icon: BarChart3 },

@@ -27,17 +27,11 @@ export function DocumentUploader({ accounts }: { accounts: Array<{ id: string; n
     if (!file || !accountId || !user || !session) return
     setBusy(true)
     setError('')
+    const createResponse = await fetch('/api/documents', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ organizationId: accountId, title: title || file.name, documentType, fileSize: file.size, mimeType: file.type || 'text/plain' }) })
+    const createPayload = await createResponse.json()
+    const document = createPayload.document
+    if (!createResponse.ok || !document) { setError(createPayload.error ?? 'Could not create document.'); setBusy(false); return }
     const supabase = createClient(async () => session.getToken())
-    const { data: document, error: createError } = await supabase.from('documents').insert({
-      organization_id: accountId,
-      title: title || file.name,
-      document_type: documentType,
-      file_size: file.size,
-      mime_type: file.type || 'text/plain',
-      uploaded_by: user.id,
-      ingest_status: 'queued',
-    }).select().single()
-    if (createError || !document) { setError(createError?.message ?? 'Could not create document.'); setBusy(false); return }
 
     const cleanName = file.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
     const storagePath = `company/${accountId}/docs/${document.id}/${cleanName}`

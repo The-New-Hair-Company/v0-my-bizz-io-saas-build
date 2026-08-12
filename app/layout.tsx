@@ -4,8 +4,25 @@ import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'MyBizz - AI-Powered Compliance for Startups',
-  description: 'Stay compliant effortlessly. MyBizz helps startups manage regulatory filings, deadlines, and documents with AI.',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.mybizz.io'),
+  title: {
+    default: 'MyBizz — Intelligence OS for digital businesses',
+    template: '%s | MyBizz',
+  },
+  description: 'Tenant-secured operating intelligence, grounded assistants and an Agency OS that turns live business evidence into the next best move.',
+  openGraph: {
+    type: 'website',
+    siteName: 'MyBizz',
+    title: 'MyBizz — Your agency. Now intelligent.',
+    description: 'Explainable operating intelligence with real evidence, hard tenant boundaries and zero paid model tokens.',
+    images: [{ url: '/mybizz-intelligence-social.png', width: 1672, height: 941, alt: 'Abstract orange and white MyBizz intelligence engine' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MyBizz — Your agency. Now intelligent.',
+    description: 'Explainable operating intelligence with real evidence and zero paid model tokens.',
+    images: ['/mybizz-intelligence-social.png'],
+  },
   icons: {
     icon: [
       {

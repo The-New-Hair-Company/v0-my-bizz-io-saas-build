@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { Bot, FileText, Loader2, Plus, SendHorizonal, Sparkles, Trash2, UserRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -19,6 +20,7 @@ export function ChatLayout({ agentType, organizationId }: { agentType: 'startup_
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [upgradeRequired, setUpgradeRequired] = useState(false)
   const bottom = useRef<HTMLDivElement>(null)
 
   const loadThreads = useCallback(async () => {
@@ -43,12 +45,13 @@ export function ChatLayout({ agentType, organizationId }: { agentType: 'startup_
     if (!message || busy) return
     setInput('')
     setError('')
+    setUpgradeRequired(false)
     setBusy(true)
     setMessages((current) => [...current, { id: `local-${Date.now()}`, role: 'user', content: message }])
     const response = await fetch('/api/ai/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message, threadId: activeThreadId, organizationId, agentType }) })
     const data = await response.json()
     setBusy(false)
-    if (!response.ok) { setError(data.error ?? 'The assistant could not complete that request.'); return }
+    if (!response.ok) { setError(data.error ?? 'The assistant could not complete that request.'); setUpgradeRequired(response.status === 402 || data.code === 'PLAN_LIMIT_REACHED'); return }
     setActiveThreadId(data.threadId)
     setMessages((current) => [...current, data.message])
     setSources(data.sources ?? [])
