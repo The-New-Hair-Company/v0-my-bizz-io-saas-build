@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { getSupabasePublicConfig } from './config'
+import { assertProductionEnvironment } from '@/lib/deployment'
 
 /**
  * Especially important if using Fluid compute: Don't put this client in a
@@ -8,6 +9,7 @@ import { getSupabasePublicConfig } from './config'
  * it.
  */
 export async function createClient() {
+  assertProductionEnvironment()
   const session = await auth()
   const { publishableKey, url } = getSupabasePublicConfig()
 

@@ -1,9 +1,10 @@
-import { auth, currentUser } from '@clerk/nextjs/server'
+import { auth } from '@clerk/nextjs/server'
 import { randomBytes } from 'node:crypto'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { isConfiguredAdmin } from '@/lib/portal/auth'
+import { isApplicationAdmin } from '@/lib/portal/auth'
+import { absoluteApplicationUrl } from '@/lib/deployment'
 
 const id = z.string().uuid()
 const optionalDate = z.string().trim().max(32).optional().nullable()
@@ -71,8 +72,7 @@ type Resource = keyof typeof schemas
 async function actor() {
   const session = await auth()
   if (!session.userId) return null
-  const user = await currentUser()
-  return { userId: session.userId, email: user?.primaryEmailAddress?.emailAddress ?? null, supabase: await createClient() }
+  return { userId: session.userId, supabase: await createClient() }
 }
 
 async function assigned(supabase: Awaited<ReturnType<typeof createClient>>, userId: string, organizationId: string, admin = false) {
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
   const data: any = parsed.data
 
   if (resource === 'account') {
-    if (!isConfiguredAdmin(current.userId, current.email)) return Response.json({ error: 'Forbidden' }, { status: 403 })
+    if (!(await isApplicationAdmin(current.userId))) return Response.json({ error: 'Forbidden' }, { status: 403 })
     const admin = createAdminClient()
     const slugBase = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'account'
     const { data: account, error } = await admin.from('organizations').insert({
@@ -157,7 +157,7 @@ export async function POST(request: Request) {
       token: randomBytes(24).toString('base64url'),
     }).select().single()
     if (error) return Response.json({ error: error.message }, { status: 400 })
-    return Response.json({ record, inviteUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/auth/sign-up?invite=${record.token}` }, { status: 201 })
+    return Response.json({ record, inviteUrl: absoluteApplicationUrl(`/auth/sign-up?invite=${record.token}`) }, { status: 201 })
   } else if (resource === 'preference') {
     const { data: record, error } = await current.supabase.from('member_preferences').upsert({
       ...data,

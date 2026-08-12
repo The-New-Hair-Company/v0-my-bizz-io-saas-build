@@ -1,13 +1,14 @@
 import { SignIn } from '@clerk/nextjs'
 import Link from 'next/link'
 import { Building2, ShieldCheck } from 'lucide-react'
+import { absoluteApplicationUrl, absoluteMarketingUrl } from '@/lib/deployment'
 
 export default function LoginPage() {
   return (
     <main className="grid min-h-screen bg-[#07111f] lg:grid-cols-[1.08fr_0.92fr]">
       <section className="relative hidden overflow-hidden border-r border-white/10 p-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(37,211,176,0.18),transparent_34%),radial-gradient(circle_at_80%_80%,rgba(56,189,248,0.14),transparent_30%)]" />
-        <Link href="/" className="relative flex items-center gap-3 text-lg font-semibold">
+        <Link href={absoluteMarketingUrl('/')} className="relative flex items-center gap-3 text-lg font-semibold">
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-400 text-slate-950">
             <Building2 className="h-5 w-5" />
           </span>
@@ -29,13 +30,13 @@ export default function LoginPage() {
       <section className="flex items-center justify-center px-5 py-12 sm:px-10">
         <div className="w-full max-w-md">
           <div className="mb-8 text-white lg:hidden">
-            <Link href="/" className="flex items-center gap-2 font-semibold"><Building2 className="h-5 w-5 text-emerald-400" /> MyBizz</Link>
+            <Link href={absoluteMarketingUrl('/')} className="flex items-center gap-2 font-semibold"><Building2 className="h-5 w-5 text-emerald-400" /> MyBizz</Link>
           </div>
           <SignIn
             path="/auth/login"
             routing="path"
-            signUpUrl="/auth/sign-up"
-            fallbackRedirectUrl="/dashboard"
+            signUpUrl={absoluteApplicationUrl('/auth/sign-up')}
+            fallbackRedirectUrl={absoluteApplicationUrl('/dashboard')}
             appearance={{
               elements: {
                 rootBox: 'w-full',

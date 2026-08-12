@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { getEmailProvider } from '@/lib/email/provider'
 import { renderCampaignEmail } from '@/lib/email/render'
 import type { NewsletterCampaignVersion } from '@/types/newsletter'
+import { getMarketingOrigin } from '@/lib/deployment'
 
 const BATCH_SIZE = 50
 
@@ -22,7 +23,7 @@ export async function processBatch(
   campaignId?: string,
 ): Promise<{ sent: number; failed: number }> {
   const supabase = getServiceClient()
-  const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://online2day.co.uk'
+  const BASE_URL = getMarketingOrigin()
 
   // Fetch queued jobs that are due
   let query = supabase

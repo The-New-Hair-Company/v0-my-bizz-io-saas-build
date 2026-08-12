@@ -2,15 +2,17 @@
 // Validates and schedules a campaign, then enqueues all send jobs.
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { enqueueCampaign } from '@/lib/queue/enqueueCampaign'
+import { auth } from '@clerk/nextjs/server'
+import { createClient } from '@/lib/supabase/server'
+import { isApplicationAdmin } from '@/lib/portal/auth'
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth()
+    if (!session.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!(await isApplicationAdmin(session.userId))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     const supabase = await createClient()
-
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { campaign_id, scheduled_at } = await req.json() as {
       campaign_id: string

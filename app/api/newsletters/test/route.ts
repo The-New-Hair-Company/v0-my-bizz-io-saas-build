@@ -2,17 +2,19 @@
 // Sends a test email to specified addresses (admin only).
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { getEmailProvider } from '@/lib/email/provider'
 import { renderCampaignEmail } from '@/lib/email/render'
+import { auth } from '@clerk/nextjs/server'
+import { createClient } from '@/lib/supabase/server'
+import { isApplicationAdmin } from '@/lib/portal/auth'
+import { getMarketingOrigin } from '@/lib/deployment'
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth()
+    if (!session.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!(await isApplicationAdmin(session.userId))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     const supabase = await createClient()
-
-    // Auth guard
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { campaign_id, to } = await req.json() as { campaign_id: string; to: string[] }
 
@@ -35,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     const provider = getEmailProvider()
     const version = campaign.newsletter_campaign_versions?.[0] ?? null
-    const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://online2day.co.uk'
+    const BASE_URL = getMarketingOrigin()
 
     const { html, text } = await renderCampaignEmail({
       version: version ?? { id: '', campaign_id, html: null, text_fallback: null, design_json: null, hero_image_url: null, created_by: null, created_at: new Date().toISOString() },

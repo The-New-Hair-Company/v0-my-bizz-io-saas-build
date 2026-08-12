@@ -2,7 +2,9 @@
 // Creates a new campaign or updates an existing draft.
 
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server'
 import { createClient } from '@/lib/supabase/server'
+import { isApplicationAdmin } from '@/lib/portal/auth'
 // slug generation is handled inline
 
 function toSlug(title: string): string {
@@ -16,9 +18,10 @@ function toSlug(title: string): string {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth()
+    if (!session.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!(await isApplicationAdmin(session.userId))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     const supabase = await createClient()
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await req.json() as {
       campaign_id?: string
@@ -69,7 +72,7 @@ export async function POST(req: NextRequest) {
           campaign_id,
           design_json: design_json ?? null,
           hero_image_url: hero_image_url ?? null,
-          created_by: user.id,
+          created_by: session.userId,
         })
       }
 
@@ -90,7 +93,7 @@ export async function POST(req: NextRequest) {
         reply_to: reply_to ?? null,
         list_id: list_id ?? null,
         status: 'draft',
-        created_by: user.id,
+        created_by: session.userId,
       })
       .select('id')
       .single()
@@ -105,7 +108,7 @@ export async function POST(req: NextRequest) {
         campaign_id: campaign.id,
         design_json: design_json ?? null,
         hero_image_url: hero_image_url ?? null,
-        created_by: user.id,
+        created_by: session.userId,
       })
     }
 

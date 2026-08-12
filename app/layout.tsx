@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
-import { ClerkProvider } from '@clerk/nextjs'
+import { DomainClerkProvider } from '@/components/auth/DomainClerkProvider'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -48,18 +48,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <ClerkProvider
-      signInUrl="/auth/login"
-      signUpUrl="/auth/sign-up"
-      signInFallbackRedirectUrl="/dashboard"
-      signUpFallbackRedirectUrl="/dashboard"
-    >
+    <DomainClerkProvider>
       <html lang="en">
         <body className="font-sans antialiased">
           {children}
           <Analytics />
         </body>
       </html>
-    </ClerkProvider>
+    </DomainClerkProvider>
   )
 }

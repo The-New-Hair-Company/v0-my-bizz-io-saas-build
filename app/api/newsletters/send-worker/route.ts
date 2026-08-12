@@ -11,18 +11,18 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { processBatch } from '@/lib/queue/processBatch'
+import { auth } from '@clerk/nextjs/server'
+import { isApplicationAdmin } from '@/lib/portal/auth'
 
 // Vercel Cron sends a request with Authorization: Bearer <CRON_SECRET>
 // Manual admin calls also accepted (authenticated via Supabase session elsewhere)
 const CRON_SECRET = process.env.CRON_SECRET
 
 export async function GET(req: NextRequest) {
-  // Validate cron secret if set
-  if (CRON_SECRET) {
-    const authHeader = req.headers.get('authorization')
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  if (!CRON_SECRET) return NextResponse.json({ error: 'Worker is not configured' }, { status: 503 })
+  const authHeader = req.headers.get('authorization')
+  if (authHeader !== `Bearer ${CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const campaignId = req.nextUrl.searchParams.get('campaign_id') ?? undefined
@@ -38,10 +38,13 @@ export async function GET(req: NextRequest) {
 
 // Also support POST for manual admin triggers from the dashboard
 export async function POST(req: NextRequest) {
-  if (CRON_SECRET) {
-    const authHeader = req.headers.get('authorization')
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authHeader = req.headers.get('authorization')
+  const hasCronSecret = Boolean(CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`)
+  if (!hasCronSecret) {
+    const session = await auth()
+    if (!session.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!(await isApplicationAdmin(session.userId))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
   }
 

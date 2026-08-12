@@ -131,10 +131,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'We could not save your brief. Please try again.' }, { status: 500 })
   }
 
-  const adminIds = (process.env.ADMIN_CLERK_USER_IDS ?? '')
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean)
+  const { data: applicationAdministrators } = await admin
+    .from('application_administrators')
+    .select('clerk_user_id')
+    .eq('status', 'active')
+  const adminIds = (applicationAdministrators ?? []).map((administrator) => administrator.clerk_user_id)
 
   if (adminIds.length) {
     const { error: assignmentError } = await admin.from('members').upsert(

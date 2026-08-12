@@ -1,6 +1,10 @@
 import { CrmSidebar } from '@/components/crm/CrmSidebar'
+import { requirePortalUser } from '@/lib/portal/auth'
+import { redirect } from 'next/navigation'
 
-export default function CrmLayout({ children }: { children: React.ReactNode }) {
+export default async function CrmLayout({ children }: { children: React.ReactNode }) {
+  const user = await requirePortalUser()
+  if (!user.isAdmin) redirect('/dashboard')
   return (
     <div
       style={{
