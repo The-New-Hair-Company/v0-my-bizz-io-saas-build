@@ -4,12 +4,13 @@ const DEFAULT_MARKETING_ORIGIN = 'https://www.mybizz.io'
 const MARKETING_HOSTS = new Set(['mybizz.io', 'www.mybizz.io'])
 const APPLICATION_HOSTS = new Set(['app.mybizz.io'])
 
-const APPLICATION_PAGE_PREFIXES = ['/dashboard', '/crm', '/auth']
+const APPLICATION_PAGE_PREFIXES = ['/dashboard', '/crm', '/auth', '/billing']
 const APPLICATION_API_PREFIXES = [
   '/api/ai',
   '/api/chat',
   '/api/documents',
   '/api/portal',
+  '/api/billing',
   '/api/newsletters/save',
   '/api/newsletters/schedule',
   '/api/newsletters/test',
@@ -68,6 +69,18 @@ export function absoluteApplicationUrl(pathname = '/') {
 
 export function absoluteMarketingUrl(pathname = '/') {
   return new URL(pathname, `${getMarketingOrigin()}/`).toString()
+}
+
+export function safeApplicationRedirect(value: string | null | undefined, fallback = '/dashboard') {
+  if (!value) return absoluteApplicationUrl(fallback)
+  try {
+    const target = new URL(value, `${getApplicationOrigin()}/`)
+    return target.origin === getApplicationOrigin()
+      ? target.toString()
+      : absoluteApplicationUrl(fallback)
+  } catch {
+    return absoluteApplicationUrl(fallback)
+  }
 }
 
 export function assertProductionEnvironment() {

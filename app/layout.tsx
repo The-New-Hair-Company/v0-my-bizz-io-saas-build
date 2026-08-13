@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
-import { DomainClerkProvider } from '@/components/auth/DomainClerkProvider'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -48,13 +47,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <DomainClerkProvider>
-      <html lang="en">
-        <body className="font-sans antialiased">
-          {children}
-          <Analytics />
-        </body>
-      </html>
-    </DomainClerkProvider>
+    <html lang="en">
+      <body className="font-sans antialiased">
+        {children}
+        <Analytics />
+      </body>
+    </html>
   )
 }

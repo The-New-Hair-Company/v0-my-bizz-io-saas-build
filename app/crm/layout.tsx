@@ -1,11 +1,13 @@
 import { CrmSidebar } from '@/components/crm/CrmSidebar'
 import { requirePortalUser } from '@/lib/portal/auth'
 import { redirect } from 'next/navigation'
+import { ApplicationClerkProvider } from '@/components/auth/DomainClerkProvider'
 
 export default async function CrmLayout({ children }: { children: React.ReactNode }) {
   const user = await requirePortalUser()
   if (!user.isAdmin) redirect('/dashboard')
   return (
+    <ApplicationClerkProvider>
     <div
       style={{
         display: 'flex',
@@ -18,5 +20,6 @@ export default async function CrmLayout({ children }: { children: React.ReactNod
       <CrmSidebar />
       <main style={{ flex: 1, overflow: 'auto', minWidth: 0 }}>{children}</main>
     </div>
+    </ApplicationClerkProvider>
   )
 }

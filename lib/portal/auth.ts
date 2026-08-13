@@ -3,6 +3,7 @@ import 'server-only'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { absoluteApplicationUrl, assertProductionEnvironment } from '@/lib/deployment'
+import { cache } from 'react'
 
 function configuredAdminIds() {
   return new Set(
@@ -189,10 +190,46 @@ async function acceptPendingInvites(userId: string, email?: string | null) {
   }
 }
 
-export async function requirePortalUser() {
+async function resolvePortalUser() {
   assertProductionEnvironment()
   const session = await auth()
   if (!session.userId) return session.redirectToSignIn({ returnBackUrl: absoluteApplicationUrl('/dashboard') })
+
+  const admin = createAdminClient()
+  const [profileResult, administratorResult, membershipResult] = await Promise.all([
+    admin
+      .from('user_profiles')
+      .select('primary_email, display_name, image_url')
+      .eq('clerk_user_id', session.userId)
+      .eq('status', 'active')
+      .maybeSingle(),
+    admin
+      .from('application_administrators')
+      .select('clerk_user_id')
+      .eq('clerk_user_id', session.userId)
+      .eq('status', 'active')
+      .maybeSingle(),
+    admin
+      .from('members')
+      .select('organization_id')
+      .eq('user_id', session.userId)
+      .limit(1)
+      .maybeSingle(),
+  ])
+
+  if (profileResult.error) throw profileResult.error
+  if (administratorResult.error) throw administratorResult.error
+  if (membershipResult.error) throw membershipResult.error
+
+  if (profileResult.data && membershipResult.data) {
+    return {
+      userId: session.userId,
+      email: profileResult.data.primary_email,
+      name: profileResult.data.display_name || profileResult.data.primary_email?.split('@')[0] || 'Portal user',
+      imageUrl: profileResult.data.image_url,
+      isAdmin: Boolean(administratorResult.data),
+    }
+  }
 
   const user = await currentUser()
   const primaryEmail = user?.primaryEmailAddress
@@ -224,3 +261,7 @@ export async function requirePortalUser() {
     isAdmin,
   }
 }
+
+// A layout and its page render concurrently. Resolve and provision the Clerk
+// identity once per request instead of repeating external auth and database I/O.
+export const requirePortalUser = cache(resolvePortalUser)

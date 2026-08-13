@@ -1,9 +1,11 @@
 import { SignIn } from '@clerk/nextjs'
 import Link from 'next/link'
 import { Building2, ShieldCheck } from 'lucide-react'
-import { absoluteApplicationUrl, absoluteMarketingUrl } from '@/lib/deployment'
+import { absoluteApplicationUrl, absoluteMarketingUrl, safeApplicationRedirect } from '@/lib/deployment'
 
-export default function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ redirect_url?: string }> }) {
+  const params = await searchParams
+  const destination = safeApplicationRedirect(params.redirect_url)
   return (
     <main className="grid min-h-screen bg-[#07111f] lg:grid-cols-[1.08fr_0.92fr]">
       <section className="relative hidden overflow-hidden border-r border-white/10 p-12 text-white lg:flex lg:flex-col lg:justify-between">
@@ -36,7 +38,7 @@ export default function LoginPage() {
             path="/auth/login"
             routing="path"
             signUpUrl={absoluteApplicationUrl('/auth/sign-up')}
-            fallbackRedirectUrl={absoluteApplicationUrl('/dashboard')}
+            forceRedirectUrl={destination}
             appearance={{
               elements: {
                 rootBox: 'w-full',

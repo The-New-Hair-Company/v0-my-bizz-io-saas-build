@@ -5,6 +5,7 @@ import { requirePortalUser } from '@/lib/portal/auth'
 import { PortalTheme } from '@/components/portal/PortalTheme'
 import { PlanBanner } from '@/components/portal/PlanBanner'
 import { getEntitlementSummary } from '@/lib/ai/entitlements'
+import { ApplicationClerkProvider } from '@/components/auth/DomainClerkProvider'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requirePortalUser()
@@ -33,6 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const entitlement = activeAccount ? await getEntitlementSummary(activeAccount.id) : null
 
   return (
+    <ApplicationClerkProvider>
     <PortalTheme accentColor={preferences?.accent_color ?? '#ff6600'} compactMode={preferences?.compact_mode}>
       <SidebarProvider>
       <div className="flex min-h-screen w-full bg-[#fff8f2]">
@@ -48,5 +50,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </div>
       </SidebarProvider>
     </PortalTheme>
+    </ApplicationClerkProvider>
   )
 }

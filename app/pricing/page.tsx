@@ -1,11 +1,12 @@
 import Link from 'next/link'
 import { ArrowRight, BrainCircuit, Check, LockKeyhole, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { absoluteApplicationUrl } from '@/lib/deployment'
 
 const plans = [
-  { key: 'free', name: 'Explorer', price: '£0', description: 'Prove the value on one live workspace.', cta: 'Start free', href: '/auth/sign-up', featured: false, features: ['3 Intelligence HQ runs / month', '5 grounded assistant questions / month', '1 indexed knowledge file', '1 member seat', '7-day intelligence history'] },
-  { key: 'starter', name: 'Studio', price: '£49', description: 'A complete intelligence layer for a focused agency team.', cta: 'Request Studio', href: '/contact?plan=studio', featured: true, features: ['100 Intelligence HQ runs / month', '250 grounded assistant questions / month', '25 indexed knowledge files', '5 member seats', '90-day intelligence history'] },
-  { key: 'pro', name: 'Scale', price: '£149', description: 'Portfolio-wide intelligence for a growing operator.', cta: 'Request Scale', href: '/contact?plan=scale', featured: false, features: ['500 Intelligence HQ runs / month', '2,000 grounded assistant questions / month', '250 indexed knowledge files', '20 member seats', 'Full intelligence history'] },
+  { key: 'free', name: 'Explorer', price: '£0', description: 'Prove the value on one live workspace.', cta: 'Start free', href: absoluteApplicationUrl('/auth/sign-up'), featured: false, features: ['3 Intelligence HQ runs / month', '5 grounded assistant questions / month', '1 indexed knowledge file', '1 member seat', '7-day intelligence history'] },
+  { key: 'starter', name: 'Studio', price: '£49', description: 'A complete intelligence layer for a focused agency team.', cta: 'Choose Studio', href: absoluteApplicationUrl('/billing/subscribe?plan=starter'), featured: true, features: ['100 Intelligence HQ runs / month', '250 grounded assistant questions / month', '25 indexed knowledge files', '5 member seats', '90-day intelligence history'] },
+  { key: 'pro', name: 'Scale', price: '£149', description: 'Portfolio-wide intelligence for a growing operator.', cta: 'Choose Scale', href: absoluteApplicationUrl('/billing/subscribe?plan=pro'), featured: false, features: ['500 Intelligence HQ runs / month', '2,000 grounded assistant questions / month', '250 indexed knowledge files', '20 member seats', 'Full intelligence history'] },
   { key: 'enterprise', name: 'Enterprise', price: 'Custom', description: 'Commercial controls, assurance and volume shaped around your operation.', cta: 'Talk to us', href: '/contact?plan=enterprise', featured: false, features: ['Custom intelligence volume', 'Custom seats and storage', 'Full intelligence history', 'Priority implementation support', 'Custom governance controls'] },
 ]
 
