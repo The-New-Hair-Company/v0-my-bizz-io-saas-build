@@ -11,9 +11,9 @@ const planCopy = {
 } as const
 
 export default async function SubscribePage({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
-  const user = await requirePortalUser()
   const { plan: requestedPlan } = await searchParams
   const plan = isPaidPlanKey(requestedPlan) ? requestedPlan : 'starter'
+  const user = await requirePortalUser(`/billing/subscribe?plan=${plan}`)
   const copy = planCopy[plan]
   const admin = createAdminClient()
   const { data: membership, error } = await admin

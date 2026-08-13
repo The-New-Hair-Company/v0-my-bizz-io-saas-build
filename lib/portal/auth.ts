@@ -190,10 +190,10 @@ async function acceptPendingInvites(userId: string, email?: string | null) {
   }
 }
 
-async function resolvePortalUser() {
+async function resolvePortalUser(returnBackPath = '/dashboard') {
   assertProductionEnvironment()
   const session = await auth()
-  if (!session.userId) return session.redirectToSignIn({ returnBackUrl: absoluteApplicationUrl('/dashboard') })
+  if (!session.userId) return session.redirectToSignIn({ returnBackUrl: absoluteApplicationUrl(returnBackPath) })
 
   const admin = createAdminClient()
   const [profileResult, administratorResult, membershipResult] = await Promise.all([
