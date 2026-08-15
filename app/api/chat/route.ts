@@ -19,7 +19,12 @@ export async function POST(request: Request) {
   const { data: membership } = await supabase.from('members').select('organization_id').eq('organization_id', organizationId).eq('user_id', session.userId).maybeSingle()
   if (!membership) return Response.json({ error: 'Forbidden' }, { status: 403 })
   const question = [...messages].reverse().find((message) => message.role === 'user')?.content ?? messages.at(-1)!.content
-  const { data, error } = await supabase.rpc('search_grounded_knowledge', { query_text: buildRetrievalQuery(question), p_organization_id: organizationId, match_count: 6 })
+  const { data, error } = await supabase.rpc('search_grounded_knowledge', {
+    query_text: buildRetrievalQuery(question, 'startup_lawyer'),
+    p_organization_id: organizationId,
+    match_count: 6,
+    p_categories: ['uk_company_law', 'uk_company_compliance'],
+  })
   if (error) return Response.json({ error: error.message }, { status: 400 })
   const answer = composeGroundedAnswer(question, (data ?? []) as GroundedSource[], 'startup_lawyer')
   if (chatId) {

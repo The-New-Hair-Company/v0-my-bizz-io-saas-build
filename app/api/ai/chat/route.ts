@@ -47,7 +47,14 @@ export async function POST(request: Request) {
     threadId = thread.id
   }
 
-  const { data: sources, error: searchError } = await supabase.rpc('search_grounded_knowledge', { query_text: buildRetrievalQuery(message), p_organization_id: organizationId, match_count: 6 })
+  const { data: sources, error: searchError } = await supabase.rpc('search_grounded_knowledge', {
+    query_text: buildRetrievalQuery(message, agentType),
+    p_organization_id: organizationId,
+    match_count: 6,
+    p_categories: agentType === 'startup_lawyer'
+      ? ['uk_company_law', 'uk_company_compliance']
+      : ['platform', 'security', 'ai', 'delivery'],
+  })
   if (searchError) return Response.json({ error: searchError.message }, { status: 400 })
   const groundedSources = (sources ?? []) as GroundedSource[]
   const answer = composeGroundedAnswer(message, groundedSources, agentType)
@@ -61,5 +68,5 @@ export async function POST(request: Request) {
   if (documentSources.length) await supabase.from('ai_citations').insert(documentSources.map((source) => ({ message_id: assistantMessage.id, chunk_id: source.source_id, document_id: source.document_id, organization_id: organizationId, quote: source.content.slice(0, 500), score: source.score })))
   await supabase.from('ai_threads').update({ updated_at: new Date().toISOString() }).eq('id', threadId)
 
-  return Response.json({ threadId, message: { id: assistantMessage.id, role: 'assistant', content: answer }, sources: groundedSources.map((source) => ({ id: source.source_id, title: source.title, excerpt: source.content.slice(0, 240), score: source.score, kind: source.source_kind })), usage: entitlement })
+  return Response.json({ threadId, message: { id: assistantMessage.id, role: 'assistant', content: answer }, sources: groundedSources.map((source) => ({ id: source.source_id, title: source.title, excerpt: source.content.slice(0, 240), score: source.score, kind: source.source_kind, url: source.source_url, category: source.category })), usage: entitlement })
 }

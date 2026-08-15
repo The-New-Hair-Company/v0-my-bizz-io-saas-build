@@ -4,8 +4,8 @@ import { requirePortalUser } from '@/lib/portal/auth'
 import { getActiveOrganization } from '@/lib/portal/context'
 
 export const metadata = {
-  title: 'AI Startup Lawyer — MyBizz',
-  description: 'AI-powered legal guidance for startups: incorporation, compliance, contracts, and more.',
+  title: 'Company Law Assistant — MyBizz',
+  description: 'Source-grounded UK company-law information and practical next-step guidance. Not legal advice.',
 }
 
 export default async function StartupLawyerPage() {

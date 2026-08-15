@@ -5,7 +5,7 @@ import { getActiveOrganization } from '@/lib/portal/context'
 
 export const metadata = {
   title: 'AI Cofounder — MyBizz',
-  description: 'Your AI strategic thinking partner: strategy, fundraising, GTM, and more.',
+  description: 'A grounded strategic thinking partner for priorities, delivery, positioning and growth decisions.',
 }
 
 export default async function CofounderPage() {

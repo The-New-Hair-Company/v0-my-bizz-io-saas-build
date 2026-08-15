@@ -1,257 +1,129 @@
-import Link from "next/link";
-import Image from "next/image";
-import {
-  ArrowRight,
-  Bot,
-  Check,
-  FileStack,
-  FolderKanban,
-  LockKeyhole,
-  Network,
-  Sparkles,
-  Users2,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { PublicAssistant } from "@/components/marketing/PublicAssistant";
+import Link from 'next/link'
+import { ArrowRight, Check, FileCheck2, MessageCircle, ShieldCheck, Sparkles } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { PublicAssistant } from '@/components/marketing/PublicAssistant'
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-white text-orange-950">
       <nav className="sticky top-0 z-50 border-b border-orange-100 bg-white/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-18 max-w-[1500px] items-center justify-between px-5">
-          <Link href="/" className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#ff6600] text-white">
+        <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-5">
+          <Link href="/" className="flex items-center gap-3" aria-label="MyBizz home">
+            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#ff6600] text-white">
               <Sparkles className="h-5 w-5" />
             </span>
-            <span>
-              <span className="block text-sm font-black tracking-tight">
-                mybizz.io
-              </span>
-              <span className="block text-[9px] font-bold uppercase tracking-[.2em] text-orange-600">
-                AI Agency OS
-              </span>
-            </span>
+            <span className="text-base font-black tracking-tight">mybizz.io</span>
           </Link>
-          <div className="hidden items-center gap-8 text-sm font-medium text-orange-950/60 md:flex">
-            <Link href="/product" className="hover:text-orange-600">
-              Platform
-            </Link>
-            <Link href="/pricing" className="hover:text-orange-600">
-              Pricing
-            </Link>
-            <Link href="/start" className="hover:text-orange-600">
-              Start a project
-            </Link>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" asChild>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Button variant="ghost" className="hidden text-orange-950 hover:bg-orange-50 sm:inline-flex" asChild>
+              <Link href="/pricing">Pricing</Link>
+            </Button>
+            <Button variant="ghost" className="text-orange-950 hover:bg-orange-50" asChild>
               <Link href="/auth/login">Log in</Link>
             </Button>
-            <Button
-              className="bg-[#ff6600] text-white hover:bg-[#e95d00]"
-              asChild
-            >
-              <Link href="/auth/sign-up">
-                Start free <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
+            <Button className="bg-[#ff6600] text-white hover:bg-[#e95d00]" asChild>
+              <Link href="/auth/sign-up">Start free</Link>
             </Button>
           </div>
         </div>
       </nav>
+
       <main>
         <section className="relative overflow-hidden border-b border-orange-100">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(255,102,0,.12),transparent_30%),radial-gradient(circle_at_80%_70%,rgba(255,102,0,.08),transparent_28%)]" />
-          <div className="relative mx-auto grid max-w-[1500px] gap-14 px-5 py-20 lg:grid-cols-[1fr_.9fr] lg:items-center lg:py-28">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-xs font-bold uppercase tracking-[.16em] text-orange-700">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-[#ff6600]" />{" "}
-                The operating system for ambitious digital work
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(255,102,0,.13),transparent_28%),radial-gradient(circle_at_85%_80%,rgba(255,153,51,.11),transparent_28%)]" />
+          <div className="relative mx-auto grid max-w-7xl gap-12 px-5 py-14 lg:grid-cols-[.82fr_1.18fr] lg:items-center lg:py-24">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3.5 py-2 text-xs font-bold text-orange-800">
+                <MessageCircle className="h-3.5 w-3.5" /> Work starts with a conversation
               </div>
-              <h1 className="mt-7 max-w-4xl text-5xl font-black leading-[.95] tracking-[-.065em] text-orange-950 sm:text-7xl xl:text-8xl">
-                Your agency.
-                <br />
-                <span className="text-[#ff6600]">Now intelligent.</span>
+              <h1 className="mt-6 text-5xl font-black leading-[.96] tracking-[-.06em] sm:text-6xl xl:text-7xl">
+                Tell us what you need.
+                <span className="mt-2 block text-[#ff6600]">MyBizz makes it clear.</span>
               </h1>
-              <p className="mt-7 max-w-2xl text-lg leading-8 text-orange-950/60">
-                One striking workspace for client intake, delivery, documents,
-                people and grounded intelligence—secured tenant by tenant from
-                the first brief to launch.
+              <p className="mt-6 max-w-xl text-lg leading-8 text-orange-950/65">
+                Ask a question, share a brief or bring a document. MyBizz gives you a useful answer and turns the next step into organised work.
               </p>
-              <div className="mt-9 flex flex-wrap gap-3">
-                <Button
-                  size="lg"
-                  className="h-13 bg-[#ff6600] px-7 text-white hover:bg-[#e95d00]"
-                  asChild
-                >
-                  <Link href="/auth/sign-up">
-                    Run it free <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Button size="lg" className="h-12 bg-[#ff6600] px-6 text-white hover:bg-[#e95d00]" asChild>
+                  <a href="#ask-mybizz">Try the chat <ArrowRight className="ml-2 h-4 w-4" /></a>
                 </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-13 border-orange-200 px-7 text-orange-950 hover:bg-orange-50"
-                  asChild
-                >
-                  <Link href="/auth/login">Enter Intelligence HQ</Link>
+                <Button size="lg" variant="outline" className="h-12 border-orange-200 px-6 text-orange-950 hover:bg-orange-50" asChild>
+                  <Link href="/auth/sign-up">Create a workspace</Link>
                 </Button>
               </div>
-              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs text-orange-950/50">
-                {[
-                  "3 free intelligence runs",
-                  "Supabase RLS",
-                  "Zero paid model tokens",
-                ].map((item) => (
-                  <span key={item} className="flex items-center gap-2">
-                    <Check className="h-3.5 w-3.5 text-[#ff6600]" />
+              <div className="mt-8 space-y-2 text-sm text-orange-950/55">
+                {['No card to start', 'Answers show their source', 'Each client workspace stays separate'].map((item) => (
+                  <p key={item} className="flex items-center gap-2">
+                    <span className="grid h-5 w-5 place-items-center rounded-full bg-orange-100 text-[#ff6600]"><Check className="h-3 w-3" /></span>
                     {item}
-                  </span>
+                  </p>
                 ))}
               </div>
             </div>
-            <PublicAssistant />
-          </div>
-        </section>
-        <section className="overflow-hidden border-b border-orange-100 bg-orange-950 px-5 py-20 text-white">
-          <div className="mx-auto max-w-[1500px]">
-            <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[.22em] text-orange-300">
-                  Not a mock-up
-                </p>
-                <h2 className="mt-3 max-w-3xl text-4xl font-black tracking-[-.05em] sm:text-6xl">
-                  The intelligence layer,
-                  <br />
-                  running on real workspace data.
-                </h2>
-              </div>
-              <div className="max-w-md">
-                <p className="text-sm leading-6 text-white/55">
-                  Every score exposes its confidence, source coverage and
-                  recommended moves. This screen was captured directly from the
-                  working product.
-                </p>
-                <Link
-                  href="/auth/sign-up"
-                  className="mt-4 inline-flex items-center text-sm font-semibold text-orange-300"
-                >
-                  Open your free workspace{" "}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </div>
-            </div>
-            <div className="mt-10 overflow-hidden rounded-3xl border border-white/15 bg-white p-2 shadow-2xl shadow-black/30">
-              <Image
-                src="/intelligence-hq-live.png"
-                alt="Live MyBizz Intelligence HQ dashboard showing workflows and an evidence-backed decision brief"
-              width={1265}
-              height={712}
-              sizes="(min-width: 1500px) 1460px, calc(100vw - 40px)"
-              className="h-auto w-full rounded-2xl"
-            />
+
+            <div id="ask-mybizz" className="scroll-mt-24">
+              <PublicAssistant />
             </div>
           </div>
         </section>
-        <section className="mx-auto max-w-[1500px] px-5 py-24">
-          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[.22em] text-[#ff6600]">
-                Agency OS
-              </p>
-              <h2 className="mt-3 max-w-3xl text-4xl font-black tracking-[-.05em] sm:text-5xl">
-                Signal, action and intelligence in one system.
-              </h2>
-            </div>
-            <p className="max-w-md text-sm leading-6 text-orange-950/55">
-              Every surface communicates with the same tenant-secured
-              operational data. There are no decorative dead ends.
-            </p>
+
+        <section className="mx-auto max-w-6xl px-5 py-20 sm:py-24">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-xs font-black uppercase tracking-[.2em] text-[#ff6600]">Simple on purpose</p>
+            <h2 className="mt-3 text-4xl font-black tracking-[-.045em] sm:text-5xl">One conversation. Three useful outcomes.</h2>
           </div>
-          <div className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {features.map((feature) => (
-              <article
-                key={feature.title}
-                className="group rounded-3xl border border-orange-100 bg-white p-7 transition hover:-translate-y-1 hover:border-orange-300 hover:shadow-xl hover:shadow-orange-950/5"
-              >
-                <span className="grid h-12 w-12 place-items-center rounded-2xl bg-orange-50 text-[#ff6600] transition group-hover:bg-[#ff6600] group-hover:text-white">
-                  <feature.icon className="h-5 w-5" />
-                </span>
-                <h3 className="mt-6 text-lg font-bold">{feature.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-orange-950/55">
-                  {feature.description}
-                </p>
+          <div className="mt-12 grid gap-4 md:grid-cols-3">
+            {steps.map((step, index) => (
+              <article key={step.title} className="rounded-3xl border border-orange-100 bg-white p-7 shadow-[0_18px_55px_-42px_rgba(154,52,0,.5)]">
+                <div className="flex items-center justify-between">
+                  <span className="grid h-11 w-11 place-items-center rounded-2xl bg-orange-50 text-[#ff6600]"><step.icon className="h-5 w-5" /></span>
+                  <span className="text-xs font-black text-orange-300">0{index + 1}</span>
+                </div>
+                <h3 className="mt-6 text-lg font-bold">{step.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-orange-950/55">{step.description}</p>
               </article>
             ))}
           </div>
         </section>
-        <section className="bg-[#ff6600] text-white">
-          <div className="mx-auto flex max-w-[1500px] flex-col items-start justify-between gap-8 px-5 py-20 md:flex-row md:items-center">
+
+        <section className="border-y border-orange-200 bg-orange-50">
+          <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-7 px-5 py-14 md:flex-row md:items-center">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[.2em] text-white/65">
-                Bring us the ambition
-              </p>
-              <h2 className="mt-3 max-w-3xl text-4xl font-black tracking-[-.05em] sm:text-6xl">
-                We’ll turn it into a system.
-              </h2>
+              <p className="text-sm font-bold text-[#ff6600]">Ready when you are</p>
+              <h2 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">Bring one real question.</h2>
+              <p className="mt-2 text-sm text-orange-950/55">Your first workspace is free. Start with the work already on your mind.</p>
             </div>
-            <Button
-              size="lg"
-              className="h-13 bg-white px-7 text-orange-700 hover:bg-orange-50"
-              asChild
-            >
-              <Link href="/start">
-                Open the discovery wizard{" "}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
+            <Button size="lg" className="h-12 bg-[#ff6600] px-6 text-white hover:bg-[#e95d00]" asChild>
+              <Link href="/auth/sign-up">Start free <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
           </div>
         </section>
       </main>
-      <footer className="border-t border-orange-100 bg-white">
-        <div className="mx-auto flex max-w-[1500px] flex-col justify-between gap-4 px-5 py-8 text-xs text-orange-950/45 sm:flex-row">
-          <span>© 2026 MyBizz. Built for better digital businesses.</span>
-          <span>Orange by conviction. Secure by design.</span>
+
+      <footer className="bg-white">
+        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 px-5 py-8 text-xs text-orange-950/45 sm:flex-row">
+          <span>© 2026 MyBizz</span>
+          <span>Clear answers. Organised action.</span>
         </div>
       </footer>
     </div>
-  );
+  )
 }
 
-const features = [
+const steps = [
   {
-    title: "Intelligent intake",
-    description:
-      "The public wizard creates a structured client account and routes the brief directly into your secure pipeline.",
-    icon: Network,
+    title: 'Ask naturally',
+    description: 'Describe the goal in your own words. There is no giant form to decode before you can begin.',
+    icon: MessageCircle,
   },
   {
-    title: "Delivery control room",
-    description:
-      "Projects, accountable actions and immovable deadlines move together from discovery to launch.",
-    icon: FolderKanban,
+    title: 'See the evidence',
+    description: 'The answer is grounded in approved knowledge and your workspace documents, with the source kept visible.',
+    icon: FileCheck2,
   },
   {
-    title: "Grounded knowledge",
-    description:
-      "Files become searchable evidence for local retrieval and cited answers without paid model tokens.",
-    icon: FileStack,
+    title: 'Move with confidence',
+    description: 'Turn the answer into a brief, task or decision while every client account remains securely separated.',
+    icon: ShieldCheck,
   },
-  {
-    title: "Tenant-by-tenant security",
-    description:
-      "Clerk proves identity and Supabase Row Level Security authorises every record operation.",
-    icon: LockKeyhole,
-  },
-  {
-    title: "Team access",
-    description:
-      "Invite administrators and members into one client account at a time with auditable database membership.",
-    icon: Users2,
-  },
-  {
-    title: "AI-shaped experience",
-    description:
-      "Purpose-built assistants retrieve, rank and explain approved evidence while refusing to invent missing facts.",
-    icon: Bot,
-  },
-];
+]

@@ -5,22 +5,22 @@ import './globals.css'
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.mybizz.io'),
   title: {
-    default: 'MyBizz — Intelligence OS for digital businesses',
+    default: 'MyBizz — Clear answers, organised action',
     template: '%s | MyBizz',
   },
-  description: 'Tenant-secured operating intelligence, grounded assistants and an Agency OS that turns live business evidence into the next best move.',
+  description: 'Ask a question, share a brief or bring a document. MyBizz gives you a useful answer and turns the next step into organised work.',
   openGraph: {
     type: 'website',
     siteName: 'MyBizz',
-    title: 'MyBizz — Your agency. Now intelligent.',
-    description: 'Explainable operating intelligence with real evidence, hard tenant boundaries and zero paid model tokens.',
-    images: [{ url: '/mybizz-intelligence-social.png', width: 1672, height: 941, alt: 'Abstract orange and white MyBizz intelligence engine' }],
+    title: 'Tell MyBizz what you need. We’ll make it clear.',
+    description: 'One simple conversation for clear answers, trusted sources and organised next steps.',
+    images: [{ url: '/og.png', width: 1672, height: 941, alt: 'Tell us what you need. MyBizz makes it clear.' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'MyBizz — Your agency. Now intelligent.',
-    description: 'Explainable operating intelligence with real evidence and zero paid model tokens.',
-    images: ['/mybizz-intelligence-social.png'],
+    title: 'Tell MyBizz what you need. We’ll make it clear.',
+    description: 'One simple conversation for clear answers, trusted sources and organised next steps.',
+    images: ['/og.png'],
   },
   icons: {
     icon: [

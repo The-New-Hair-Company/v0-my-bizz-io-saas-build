@@ -28,15 +28,17 @@ export function ChatStream({ messages, isLoading, agentType = 'startup_lawyer' }
             <AgentIcon className="h-7 w-7 text-primary" />
           </div>
           <h2 className="mb-2 text-base font-semibold text-foreground">
-            {agentType === 'cofounder' ? 'AI Cofounder' : 'AI Startup Lawyer'}
+            {agentType === 'cofounder' ? 'AI Cofounder' : 'Company Law Assistant'}
           </h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
             {agentType === 'cofounder'
               ? 'Ask me about strategy, fundraising, go-to-market, or anything to move your company forward.'
-              : 'Ask me about incorporation, annual compliance, contracts, regulatory requirements, or any legal question.'}
+              : 'Describe the company-law issue in your own words. I’ll connect it to reliable sources and give you a practical next step.'}
           </p>
           <p className="mt-3 text-xs text-muted-foreground/70">
-            Responses are grounded in your document vault where available.
+            {agentType === 'cofounder'
+              ? 'Recommendations are grounded in your workspace evidence.'
+              : 'General information only — not legal advice or a replacement for a solicitor.'}
           </p>
         </div>
       </div>
