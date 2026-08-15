@@ -4,6 +4,7 @@ import {
   absoluteApplicationUrl,
   absoluteMarketingUrl,
   assertProductionEnvironment,
+  getMarketingOrigin,
   isApplicationApi,
   isApplicationHost,
   isApplicationPage,
@@ -21,8 +22,11 @@ const applicationAuthentication = clerkMiddleware(
     }
   },
   (request) => ({
-    authorizedParties: isApplicationHost(request.nextUrl.hostname) || process.env.VERCEL_ENV === 'production'
-      ? [getApplicationOrigin()]
+    // Keep every origin explicit: existing production sessions were issued on
+    // the marketing hosts before the application moved to app.mybizz.io.
+    // All three origins are controlled by MyBizz and no wildcard is accepted.
+    authorizedParties: process.env.VERCEL_ENV === 'production'
+      ? [getApplicationOrigin(), getMarketingOrigin(), 'https://mybizz.io']
       : [request.nextUrl.origin],
     signInUrl: absoluteApplicationUrl('/auth/login'),
     signUpUrl: absoluteApplicationUrl('/auth/sign-up'),
