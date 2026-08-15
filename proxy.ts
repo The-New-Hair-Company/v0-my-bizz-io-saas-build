@@ -65,10 +65,6 @@ export default async function proxy(request: NextRequest, event: NextFetchEvent)
       )
     }
 
-    // Clerk's hosted components initialise directly on these public routes.
-    // Skipping middleware avoids a handshake loop while sign-in state changes.
-    if (pathname.startsWith('/auth/')) return NextResponse.next()
-
     // Stripe authenticates this endpoint with its signed webhook payload.
     if (pathname === '/api/billing/webhook') return NextResponse.next()
   }
