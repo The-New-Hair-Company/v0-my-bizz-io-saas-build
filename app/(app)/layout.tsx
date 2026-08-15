@@ -1,37 +1,40 @@
 ﻿import { AppSidebar } from '@/components/app-sidebar'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePortalUser } from '@/lib/portal/auth'
 import { PortalTheme } from '@/components/portal/PortalTheme'
 import { PlanBanner } from '@/components/portal/PlanBanner'
-import { getEntitlementSummary } from '@/lib/ai/entitlements'
 import { ApplicationClerkProvider } from '@/components/auth/DomainClerkProvider'
+
+type PortalShell = {
+  accounts?: Array<{
+    id: string
+    name: string
+    slug: string
+    stage: string
+    role: string
+    source: string
+  }>
+  preferences?: {
+    active_organization_id?: string | null
+    accent_color?: string
+    compact_mode?: boolean
+  }
+  entitlement?: {
+    intelligenceRuns: { used: number; limit: number }
+  } | null
+}
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requirePortalUser()
-  const supabase = await createClient()
-  const [{ data: memberships }, { data: preferences }] = await Promise.all([
-    supabase
-      .from('members')
-      .select('role, organization_id, organizations(id, name, slug, lifecycle_stage)')
-      .eq('user_id', user.userId)
-      .order('created_at', { ascending: true }),
-    supabase
-      .from('member_preferences')
-      .select('active_organization_id, accent_color, compact_mode')
-      .eq('user_id', user.userId)
-      .maybeSingle(),
-  ])
+  const admin = createAdminClient()
+  const { data, error } = await admin.rpc('get_portal_shell', { p_clerk_user_id: user.userId })
+  if (error) throw error
 
-  const accounts = (memberships ?? []).map((membership: any) => ({
-    id: membership.organization_id,
-    name: Array.isArray(membership.organizations) ? membership.organizations[0]?.name : membership.organizations?.name,
-    slug: Array.isArray(membership.organizations) ? membership.organizations[0]?.slug : membership.organizations?.slug,
-    stage: Array.isArray(membership.organizations) ? membership.organizations[0]?.lifecycle_stage : membership.organizations?.lifecycle_stage,
-    role: membership.role,
-  }))
-  const activeAccount = accounts.find((account) => account.id === preferences?.active_organization_id) ?? accounts[0]
-  const entitlement = activeAccount ? await getEntitlementSummary(activeAccount.id) : null
+  const shell = (data ?? {}) as PortalShell
+  const accounts = shell.accounts ?? []
+  const preferences = shell.preferences
+  const entitlement = shell.entitlement
 
   return (
     <ApplicationClerkProvider>

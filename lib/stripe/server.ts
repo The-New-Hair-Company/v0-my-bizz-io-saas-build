@@ -4,6 +4,11 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 
 export type PaidPlanKey = 'starter' | 'pro'
 
+type StripeRequestOptions = {
+  method?: 'GET' | 'POST'
+  idempotencyKey?: string
+}
+
 export function isPaidPlanKey(value: unknown): value is PaidPlanKey {
   return value === 'starter' || value === 'pro'
 }
@@ -14,6 +19,15 @@ export function stripePriceForPlan(plan: PaidPlanKey) {
     : process.env.STRIPE_SCALE_PRICE_ID
   if (!price?.startsWith('price_')) throw new Error(`Stripe price is not configured for ${plan}.`)
   return price
+}
+
+export function assertStripeConfiguration() {
+  const secret = process.env.STRIPE_SECRET_KEY
+  if (!secret || (!secret.startsWith('sk_') && !secret.startsWith('rk_'))) {
+    throw new Error('Stripe billing is not configured.')
+  }
+  stripePriceForPlan('starter')
+  stripePriceForPlan('pro')
 }
 
 export function stripePaymentLinkForPlan(plan: PaidPlanKey) {
@@ -43,17 +57,28 @@ export function planForStripePaymentLink(paymentLinkId: string | null): PaidPlan
   return null
 }
 
-export async function stripeRequest<T>(path: string, params: URLSearchParams): Promise<T> {
+export async function stripeRequest<T>(
+  path: string,
+  params = new URLSearchParams(),
+  options: StripeRequestOptions = {},
+): Promise<T> {
   const secret = process.env.STRIPE_SECRET_KEY
-  if (!secret?.startsWith('sk_')) throw new Error('Stripe is not configured.')
+  if (!secret || (!secret.startsWith('sk_') && !secret.startsWith('rk_'))) {
+    throw new Error('Stripe is not configured.')
+  }
 
-  const response = await fetch(`https://api.stripe.com/v1${path}`, {
-    method: 'POST',
+  const method = options.method ?? 'POST'
+  const url = new URL(`https://api.stripe.com/v1${path}`)
+  if (method === 'GET') url.search = params.toString()
+
+  const response = await fetch(url, {
+    method,
     headers: {
       Authorization: `Bearer ${secret}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
+      ...(method === 'POST' ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
+      ...(options.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : {}),
     },
-    body: params,
+    body: method === 'POST' ? params : undefined,
     cache: 'no-store',
   })
   const data = await response.json()

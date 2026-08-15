@@ -1,11 +1,5 @@
-// app/crm/newsletters/page.tsx
-import { CrmDashboard } from '@/components/crm-dashboard/crm-dashboard'
+import { redirect } from 'next/navigation'
 
-export const metadata = {
-  title: 'Newsletters | Online2Day Dashboard',
-  description: 'Create, schedule, and track branded newsletter campaigns.',
-}
-
-export default function CrmNewslettersPage() {
-  return <CrmDashboard section="newsletters" />
+export default function LegacyCrmNewslettersPage() {
+  redirect('/dashboard/intakes')
 }

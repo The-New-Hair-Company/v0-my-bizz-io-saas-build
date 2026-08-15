@@ -1,10 +1,5 @@
-import { EmailsDashboard } from '@/components/emails/EmailsDashboard'
+import { redirect } from 'next/navigation'
 
-export const metadata = {
-  title: 'Emails | Online2Day CRM',
-  description: 'Send, test and track emails that move leads closer to sale.',
-}
-
-export default function CrmEmailsPage() {
-  return <EmailsDashboard />
+export default function LegacyCrmEmailsPage() {
+  redirect('/dashboard/intakes')
 }

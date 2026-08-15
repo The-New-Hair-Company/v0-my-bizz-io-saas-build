@@ -1,6 +1,6 @@
 ﻿import Link from 'next/link'
 import { ArrowUpRight, Building2, CalendarClock, CheckCircle2, ChevronRight, CircleDollarSign, Clock3, FileStack, Gauge, Inbox, Layers3, MoreHorizontal, Plus, Sparkles, TrendingUp, Users2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePortalUser } from '@/lib/portal/auth'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -8,21 +8,18 @@ import { RecordDialog } from '@/components/portal/RecordDialog'
 
 export default async function DashboardPage() {
   const user = await requirePortalUser()
-  const supabase = await createClient()
+  const admin = createAdminClient()
+  const { data, error } = await admin.rpc('get_dashboard_snapshot', {
+    p_clerk_user_id: user.userId,
+  })
+  if (error) throw error
+  const snapshot = (data ?? {}) as Record<string, any[]>
 
-  const [organizationsResult, intakesResult, projectsResult, tasksResult, activityResult] = await Promise.all([
-    supabase.from('organizations').select('*').order('last_activity_at', { ascending: false }),
-    supabase.from('intake_submissions').select('*').order('submitted_at', { ascending: false }).limit(8),
-    supabase.from('client_projects').select('*').order('updated_at', { ascending: false }),
-    supabase.from('tasks').select('id, organization_id, status, priority, due_date'),
-    supabase.from('account_activity').select('*, organizations(name)').order('created_at', { ascending: false }).limit(7),
-  ])
-
-  const organizations = (organizationsResult.data ?? []).filter((organization: any) => organization.source !== 'internal')
-  const intakes = intakesResult.data ?? []
-  const projects = projectsResult.data ?? []
-  const tasks = tasksResult.data ?? []
-  const activity = activityResult.data ?? []
+  const organizations = (snapshot.organizations ?? []).filter((organization: any) => organization.source !== 'internal')
+  const intakes = snapshot.intakes ?? []
+  const projects = snapshot.projects ?? []
+  const tasks = snapshot.tasks ?? []
+  const activity = snapshot.activity ?? []
   const activeAccounts = organizations.filter((organization: any) => ['active', 'onboarding'].includes(organization.lifecycle_stage)).length
   const pipelineValue = organizations.reduce((sum: number, organization: any) => sum + Number(organization.estimated_value ?? 0), 0)
   const openTasks = tasks.filter((task: any) => !['done', 'cancelled'].includes(task.status)).length

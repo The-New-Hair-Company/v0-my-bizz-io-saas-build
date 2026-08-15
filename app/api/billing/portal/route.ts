@@ -12,16 +12,19 @@ export async function POST(request: Request) {
   }
   const user = await requirePortalUser()
   const admin = createAdminClient()
-  const { data, error } = await admin
-    .from('members')
-    .select('organizations(organization_subscriptions(provider_customer_id))')
-    .eq('user_id', user.userId)
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .single()
+  const { data: shellData, error: shellError } = await admin.rpc('get_portal_shell', {
+    p_clerk_user_id: user.userId,
+  })
+  if (shellError) throw shellError
+  const organizationId = (shellData as any)?.accounts?.[0]?.id
+  if (!organizationId) return Response.json({ error: 'No billable workspace was found.' }, { status: 404 })
+
+  const { data: subscription, error } = await admin
+    .from('organization_subscriptions')
+    .select('provider_customer_id')
+    .eq('organization_id', organizationId)
+    .maybeSingle()
   if (error) throw error
-  const organization = Array.isArray((data as any).organizations) ? (data as any).organizations[0] : (data as any).organizations
-  const subscription = Array.isArray(organization?.organization_subscriptions) ? organization.organization_subscriptions[0] : organization?.organization_subscriptions
   if (!subscription?.provider_customer_id) return Response.json({ error: 'No Stripe customer is linked to this workspace.' }, { status: 404 })
 
   // A secret key gives an already-authenticated customer a direct portal

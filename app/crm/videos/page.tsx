@@ -1,10 +1,5 @@
-import { VideosDashboard } from '@/components/videos/VideosDashboard'
+import { redirect } from 'next/navigation'
 
-export const metadata = {
-  title: 'Videos | Online2Day CRM',
-  description: 'Manage and track video assets across your sales funnel.',
-}
-
-export default function CrmVideosPage() {
-  return <VideosDashboard />
+export default function LegacyCrmVideosPage() {
+  redirect('/dashboard/documents')
 }

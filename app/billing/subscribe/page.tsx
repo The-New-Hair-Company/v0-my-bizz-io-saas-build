@@ -16,18 +16,20 @@ export default async function SubscribePage({ searchParams }: { searchParams: Pr
   const user = await requirePortalUser(`/billing/subscribe?plan=${plan}`)
   const copy = planCopy[plan]
   const admin = createAdminClient()
-  const { data: membership, error } = await admin
-    .from('members')
-    .select('organization_id, organizations(name, plan, organization_subscriptions(provider_customer_id, provider_subscription_id, status))')
-    .eq('user_id', user.userId)
-    .order('created_at', { ascending: true })
-    .limit(1)
+  const { data: shellData, error: shellError } = await admin.rpc('get_portal_shell', {
+    p_clerk_user_id: user.userId,
+  })
+  if (shellError) throw shellError
+  const organizationId = (shellData as any)?.accounts?.[0]?.id
+  if (!organizationId) throw new Error('No billable workspace was found.')
+
+  const { data: organization, error } = await admin
+    .from('organizations')
+    .select('name, plan, organization_subscriptions(provider_customer_id, provider_subscription_id, status)')
+    .eq('id', organizationId)
     .single()
   if (error) throw error
 
-  const organization = Array.isArray((membership as any).organizations)
-    ? (membership as any).organizations[0]
-    : (membership as any).organizations
   const subscription = Array.isArray(organization?.organization_subscriptions)
     ? organization.organization_subscriptions[0]
     : organization?.organization_subscriptions

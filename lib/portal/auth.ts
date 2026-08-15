@@ -5,6 +5,16 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { absoluteApplicationUrl, assertProductionEnvironment } from '@/lib/deployment'
 import { cache } from 'react'
 
+type PortalIdentity = {
+  profile?: {
+    primary_email: string | null
+    display_name: string | null
+    image_url: string | null
+  } | null
+  isAdmin?: boolean
+  hasMembership?: boolean
+}
+
 function configuredAdminIds() {
   return new Set(
     (process.env.ADMIN_CLERK_USER_IDS ?? '')
@@ -196,38 +206,19 @@ async function resolvePortalUser(returnBackPath = '/dashboard') {
   if (!session.userId) return session.redirectToSignIn({ returnBackUrl: absoluteApplicationUrl(returnBackPath) })
 
   const admin = createAdminClient()
-  const [profileResult, administratorResult, membershipResult] = await Promise.all([
-    admin
-      .from('user_profiles')
-      .select('primary_email, display_name, image_url')
-      .eq('clerk_user_id', session.userId)
-      .eq('status', 'active')
-      .maybeSingle(),
-    admin
-      .from('application_administrators')
-      .select('clerk_user_id')
-      .eq('clerk_user_id', session.userId)
-      .eq('status', 'active')
-      .maybeSingle(),
-    admin
-      .from('members')
-      .select('organization_id')
-      .eq('user_id', session.userId)
-      .limit(1)
-      .maybeSingle(),
-  ])
+  const { data, error } = await admin.rpc('get_portal_identity', {
+    p_clerk_user_id: session.userId,
+  })
+  if (error) throw error
+  const identity = (data ?? {}) as PortalIdentity
 
-  if (profileResult.error) throw profileResult.error
-  if (administratorResult.error) throw administratorResult.error
-  if (membershipResult.error) throw membershipResult.error
-
-  if (profileResult.data && membershipResult.data) {
+  if (identity.profile && identity.hasMembership) {
     return {
       userId: session.userId,
-      email: profileResult.data.primary_email,
-      name: profileResult.data.display_name || profileResult.data.primary_email?.split('@')[0] || 'Portal user',
-      imageUrl: profileResult.data.image_url,
-      isAdmin: Boolean(administratorResult.data),
+      email: identity.profile.primary_email,
+      name: identity.profile.display_name || identity.profile.primary_email?.split('@')[0] || 'Portal user',
+      imageUrl: identity.profile.image_url,
+      isAdmin: Boolean(identity.isAdmin),
     }
   }
 
